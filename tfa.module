@@ -40,8 +40,8 @@ function tfa_entry_access($uid, $check_hash) {
   $account = user_load($uid);
   $hash = tfa_login_hash($account);
   $code = tfa_get_code($uid);
-  // Hash must be valid and the code must have been created within the day.
-  return ($hash == $check_hash) && !empty($code) && ($code['created'] > REQUEST_TIME - 86400);
+  // Hash must be valid and the code must have been created within the configured time period.
+  return ($hash == $check_hash) && !empty($code) && ($code['created'] > REQUEST_TIME - variable_get('tfa_code_ttl', 86400));
 }
 
 /**
@@ -67,7 +67,7 @@ function tfa_permission() {
 function tfa_cron() {
   // Remove entries from the tfa table that are older than 1 day.
   $num_deleted = db_delete('tfa')
-    ->condition('created', REQUEST_TIME - 86400, '<')
+    ->condition('created', REQUEST_TIME - variable_get('tfa_code_ttl', 86400), '<')
     ->execute();
 }
 

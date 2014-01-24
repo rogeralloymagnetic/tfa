@@ -173,6 +173,12 @@ function tfa_admin_settings() {
     '#default_value' => variable_get('tfa_code_length', 6),
     '#description' => t('Length of the TFA login code.'),
   );
+  $form['tfa_code_ttl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Code expiration time'),
+    '#default_value' => variable_get('tfa_code_ttl', 86400),
+    '#description' => t('Length of time the TFA login code is valid.'),
+  );
 
   return system_settings_form($form);
 }
