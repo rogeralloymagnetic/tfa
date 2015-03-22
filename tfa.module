@@ -101,7 +101,7 @@ function tfa_get_context($account) {
  *     'uid' => 9,
  *     'plugins' => array(
  *       'validate' => 'tfa_my_send_plugin',
- *       'login' => arrray('tfa_my_login_plugin'),
+ *       'login' => array('tfa_my_login_plugin'),
  *       'fallback' => array('tfa_my_recovery_plugin'),
  *     ),
  */
@@ -350,7 +350,7 @@ function tfa_user_login(&$edit, $account) {
     $identifier = variable_get('user_failed_login_identifier_uid_only', FALSE) ? $account->uid : $account->uid . '-' . ip_address();
     flood_clear_event('tfa_user', $identifier);
     flood_register_event('tfa_begin');
-    $context = tfa_start_context($account);
+    tfa_start_context($account);
     $tfa = tfa_get_process($account);
 
     // Hold onto destination. It will be used in tfa_form_submit().
@@ -375,7 +375,7 @@ function tfa_user_login(&$edit, $account) {
 }
 
 /**
- * Unathenticate the user. Similar to user_logout() but doesn't redirect.
+ * Unauthenticate the user. Similar to user_logout() but doesn't redirect.
  */
 function tfa_logout() {
   global $user;

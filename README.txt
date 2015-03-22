@@ -22,10 +22,10 @@ page for contributed plugins or read the section on Plugin development.
 ### Configuration
 
 TFA can be configured on your Drupal site at Administration - Configuration -
-People - Two-factor Authentication. Availble plugins will be listed along with
+People - Two-factor Authentication. Available plugins will be listed along with
 their type and configured use, if set.
 
-Additionaly, a permission is exposed to Drupal roles allowing them to skip the
+Additionally, a permission is exposed to Drupal roles allowing them to skip the
 TFA process -- regardless of plugins and the "require TFA" setting.
 
 #### Default validation plugin
@@ -37,7 +37,7 @@ to log in.
 
 #### Fallback plugins
 
-With multiple valdiation plugins installed, TFA can be setup to handle fallback
+With multiple validation plugins installed, TFA can be setup to handle fallback
 options for a user going through the TFA process. For example, let's say a user
 has setup SMS code delivery and TOTP via Google Authenticator app on their
 phone. In the situation that the user has deleted the Authenticator app they
@@ -84,7 +84,7 @@ code.
 
 #### Plugin context
 
-A plugin is instansiated with an array of data about the occuring TFA process.
+A plugin is instantiated with an array of data about the occurring TFA process.
 This context array must contain the following elements that should not be
 modified.
 
@@ -111,7 +111,7 @@ prevent a repeated attempt.
 #### Cryptography
 
 The base TFA plugin class provides encryption and decryption methods using PHP
-mcrypt. While you can use these methods for simple encryption it is recommended
+Mcrypt. While you can use these methods for simple encryption it is recommended
 that you utilize more advanced cryptography libraries with your own plugins.
 
 Use one of the following libraries and override the TfaBasePlugin encrypt and

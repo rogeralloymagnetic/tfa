@@ -227,7 +227,7 @@ class Tfa {
   }
 
   /**
-   * Whether the TFA process has any fallback proceses.
+   * Whether the TFA process has any fallback process.
    *
    * @return bool
    */

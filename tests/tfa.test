@@ -179,8 +179,6 @@ class TfaTestCase extends DrupalWebTestCase {
       'pass' => $account->pass_raw,
     );
     $this->drupalPost('user/login', $edit, 'Log in');
-    $url_parts = explode('/', $this->url);
-    $login_hash = array_pop($url_parts);
     $this->assertText('Error during send', 'Error message appears for begin error');
     // Test resend.
     $this->drupalPost(NULL, array(), 'Resend');
@@ -220,7 +218,6 @@ class TfaTestCase extends DrupalWebTestCase {
 
   public function testLoginPlugins() {
     variable_set('tfa_validate_plugin', 'tfa_test_send');
-    $code = $this->randomName();
     // Enable login plugin.
     variable_set('tfa_login_plugins', array('tfa_test_login'));
 
