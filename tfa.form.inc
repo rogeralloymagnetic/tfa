@@ -25,7 +25,6 @@ function tfa_form($form, $form_state, $account) {
     module_invoke_all('tfa_flood_hit', $tfa->getContext());
     return drupal_access_denied();
   }
-
   // Get TFA plugins form.
   $form = $tfa->getForm($form, $form_state);
   if ($tfa->hasFallback()) {

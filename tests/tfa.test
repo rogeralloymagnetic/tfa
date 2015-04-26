@@ -193,13 +193,13 @@ class TfaTestCase extends DrupalWebTestCase {
 
     $account = $this->web_user;
 
-    $edit = array(
+    $login = array(
       'name' => $account->name,
       'pass' => $account->pass_raw,
     );
     // Set destination to filter tips page.
     $options = array('query' => array('destination' => 'filter/tips'));
-    $this->drupalPost('user/login', $edit, 'Log in', $options);
+    $this->drupalPost('user/login', $login, 'Log in', $options);
     // Reload account since login timestamp is updated.
     $account = user_load($account->uid);
     $login_hash = tfa_login_hash($account);
@@ -209,6 +209,19 @@ class TfaTestCase extends DrupalWebTestCase {
       'code' => $code,
     );
     $this->drupalPost('system/tfa/' . $account->uid . '/' . $login_hash, $edit, 'Submit', $options);
+    $this->assertLink('Log out', 0, 'Logout link appears');
+    // Confirm user is on filter tips page.
+    $this->assertText('Compose tips', 'Redirected page text appears');
+    $this->drupalLogout();
+
+    // Test form_state redirect. tfa_test module sets filter/tips redirect.
+    variable_set('tfa_test_login_form_redirect', TRUE);
+
+    $this->drupalPost('user/login', $login, 'Log in');
+    $edit = array(
+      'code' => $code,
+    );
+    $this->drupalPost(NULL, $edit, 'Submit');
     $this->assertLink('Log out', 0, 'Logout link appears');
     // Confirm user is on filter tips page.
     $this->assertText('Compose tips', 'Redirected page text appears');

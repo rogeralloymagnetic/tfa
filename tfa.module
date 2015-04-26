@@ -269,26 +269,24 @@ function tfa_login_submit($form, &$form_state) {
     $form_state['redirect'] = 'user';
   }
   elseif (!tfa_login_complete($account) && $tfa->ready() && !tfa_login_allowed($account)) {
-
     // Restart flood levels, session context, and TFA process.
     $identifier = variable_get('user_failed_login_identifier_uid_only', FALSE) ? $account->uid : $account->uid . '-' . ip_address();
     flood_clear_event('tfa_user', $identifier);
     flood_register_event('tfa_begin');
-    $context = tfa_start_context($account);
+    tfa_start_context($account);
     $tfa = tfa_get_process($account);
 
     $query = drupal_get_query_parameters();
-    if (!empty($form_state['redirect'])) {
-      // If there's an existing redirect set it in TFA context and
-      // tfa_form_submit() will extract and set once process is complete.
-      $context['redirect'] = $form_state['redirect'];
-
-    }
     unset($_GET['destination']);
 
     // Begin TFA and set process context.
     $tfa->begin();
     $context = $tfa->getContext();
+    // Support form set redirect. Will be used on completion of TFA form
+    // process.
+    if (!empty($form_state['redirect'])) {
+      $context['redirect'] = $form_state['redirect'];
+    }
     tfa_set_context($account, $context);
 
     $login_hash = tfa_login_hash($account);
