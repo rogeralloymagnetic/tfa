@@ -153,3 +153,20 @@ function my_tfa_setup_form_submit($form, &$form_state) {
 function hook_tfa_flood_hit($context = array()) {
 
 }
+
+/**
+ * Whether to halt login because TFA is not setup or ready for the account.
+ *
+ * Implement this hook to decide if authentication should be denied under the
+ * conditions of the account not having TFA set up. TFA module will have already
+ * invoked 'ready' methods on enabled plugins.
+ *
+ * @param object $account
+ *   User account.
+ *
+ * @return bool
+ *   FALSE to disallow login or TRUE to allow it without undergoing TFA.
+ */
+function hook_tfa_ready_require($account) {
+
+}

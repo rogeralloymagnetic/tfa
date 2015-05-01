@@ -44,10 +44,6 @@ function tfa_entry_access($account, $url_hash) {
  */
 function tfa_permission() {
   return array(
-    'require tfa' => array(
-      'title' => t('Require TFA process'),
-      'description' => t('Require two-factor to authenticate. Note: users without TFA setup will be unable to log in.'),
-    ),
     'admin tfa settings' => array(
       'title' => t('Administer TFA'),
       'description' => t('Configure two-factor authentication settings.'),
@@ -262,13 +258,30 @@ function tfa_login_submit($form, &$form_state) {
   // Similar to tfa_user_login() but not required to force user logout.
 
   $account = isset($form_state['uid']) ? user_load($form_state['uid']) : user_load_by_name($form_state['values']['name']);
-  $tfa = tfa_get_process($account);
-
-  if (user_access('require tfa', $account) && !tfa_login_complete($account) && !$tfa->ready()) {
-    drupal_set_message(t('Login disallowed. You are required to setup two-factor authentication. Please contact a site administrator.'), 'error');
-    $form_state['redirect'] = 'user';
+  // Return early if user has succesfully gone through TFA process or if
+  // a login plugin specifically allows it.
+  if (tfa_login_allowed($account)) {
+    // Authentication can continue so invoke user_login_submit().
+    user_login_submit($form, $form_state);
+    return;
   }
-  elseif (!tfa_login_complete($account) && $tfa->ready() && !tfa_login_allowed($account)) {
+
+  $tfa = tfa_get_process($account);
+  // Check if TFA has been set up by the account.
+  if (!$tfa->ready()) {
+    // Allow other modules to act on login when account is not set up for TFA.
+    $require_tfa = array_filter(module_invoke_all('tfa_ready_require', $account));
+    if (!empty($require_tfa)) {
+      $form_state['redirect'] = !empty($form_state['redirect']) ? $form_state['redirect'] : 'user';
+      return;
+    }
+    else {
+      // Not required so continue with log in.
+      user_login_submit($form, $form_state);
+      return;
+    }
+  }
+  else {
     // Restart flood levels, session context, and TFA process.
     $identifier = variable_get('user_failed_login_identifier_uid_only', FALSE) ? $account->uid : $account->uid . '-' . ip_address();
     flood_clear_event('tfa_user', $identifier);
@@ -295,34 +308,22 @@ function tfa_login_submit($form, &$form_state) {
       array('query' => $query),
     );
   }
-  else {
-    // Authentication can continue so invoke user_login_submit().
-    user_login_submit($form, $form_state);
-  }
-}
-
-/**
- * Check if TFA process has completed so authentication should not be stopped.
- *
- * @param $account User account
- * @return bool
- */
-function tfa_login_complete($account) {
-  // TFA master login allowed switch is set by tfa_login().
-  if (isset($_SESSION['tfa'][$account->uid]['login']) && $_SESSION['tfa'][$account->uid]['login'] === TRUE) {
-    return TRUE;
-  }
-  return FALSE;
 }
 
 /**
  * Check TFA plugins if login should be interrupted for authenticating account.
  *
- * @param $account User account
+ * @param object $account
+ *   User account
+ *
  * @return bool
  */
 function tfa_login_allowed($account) {
-  // Check if login plugins will allow login.
+  // TFA master login allowed switch is set by tfa_login().
+  if (isset($_SESSION['tfa'][$account->uid]['login']) && $_SESSION['tfa'][$account->uid]['login'] === TRUE) {
+    return TRUE;
+  }
+  // Else check if login plugins will specifically allow login.
   $tfa = tfa_get_process($account);
   return $tfa->loginAllowed() === TRUE;
 }
@@ -335,13 +336,23 @@ function tfa_user_login(&$edit, $account) {
     return;
   }
 
-  $tfa = tfa_get_process($account);
-  if (user_access('require tfa', $account) && !tfa_login_complete($account) && !$tfa->ready()) {
-    tfa_logout();
-    drupal_set_message(t('Login disallowed. You are required to setup two-factor authentication. Please contact a site administrator.'), 'error');
-    drupal_goto('user');
+  // Return early if user has succesfully gone through TFA process or if
+  // a login plugin specifically allows it.
+  if (tfa_login_allowed($account)) {
+    return;
   }
-  elseif (!tfa_login_complete($account) && $tfa->ready() && !tfa_login_allowed($account)) {
+
+  $tfa = tfa_get_process($account);
+  // Check if TFA has been set up by the account.
+  if (!$tfa->ready()) {
+    // Allow other modules to act on login when account is not set up for TFA.
+    $require_tfa = array_filter(module_invoke_all('tfa_ready_require', $account));
+    if (!empty($require_tfa)) {
+      tfa_logout();
+      drupal_goto('user');
+    }
+  }
+  else {
     // User has been authenticated so force logout and redirect to TFA form.
     tfa_logout();
     // Restart flood levels, session context, and TFA process.
