@@ -49,4 +49,5 @@ function tfa_requirements($phase) {
 
     return $requirements;
   }
+  return array();
 }
