@@ -483,7 +483,7 @@ abstract class TfaBasePlugin {
       $chars = strtolower(base64_encode(drupal_random_bytes($this->codeLength)));
       // Remove some characters that are more difficult to distinguish or type.
       $string .= strtr($chars, array('+' => '', '/' => '', '=' => '', '-' => '', '_' => '', '0' => '', 'o' => ''));
-    } while(strlen($string <= $this->codeLength));
+    } while(strlen($string) <= $this->codeLength);
 
     return substr($string, 0, $this->codeLength);
   }
