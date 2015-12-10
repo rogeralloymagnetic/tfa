@@ -268,7 +268,7 @@ function tfa_login_submit($form, &$form_state) {
 
   $tfa = tfa_get_process($account);
   // Check if TFA has been set up by the account.
-  if (!$tfa->ready()) {
+  if (!$tfa->ready() && !$tfa->isFallback()) {
     // Allow other modules to act on login when account is not set up for TFA.
     $require_tfa = array_filter(module_invoke_all('tfa_ready_require', $account));
     if (!empty($require_tfa)) {

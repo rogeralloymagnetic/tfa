@@ -236,6 +236,15 @@ class Tfa {
   }
 
   /**
+   * Whether it's a fallback process.
+   *
+   * @return bool
+   */
+  public function isFallback() {
+    return isset($this->context['active_fallback']);
+  }
+
+  /**
    * Return TFA context.
    *
    * @return array
