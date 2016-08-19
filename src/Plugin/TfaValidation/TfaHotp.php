@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @TfaValidation(
  *   id = "tfa_hotp",
- *   label = @Translation("TFA Hotp"),
+ *   label = @Translation("TFA Hmac-based OTP(HOTP)"),
  *   description = @Translation("TFA Hotp Validation Plugin"),
  *   fallbacks = {
  *    "tfa_recovery_code"
@@ -35,11 +35,18 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
   protected $auth;
 
   /**
-   * The time-window in which the validation should be done.
+   * The counter window in which the validation should be done.
    *
    * @var int
    */
-  protected $timeSkew;
+  protected $counterWindow;
+
+  /**
+   * Name prefix.
+   *
+   * @var string
+   */
+  protected $namePrefix;
 
   /**
    * Whether the code has already been used or not.
@@ -56,9 +63,17 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
     $this->auth      = new \StdClass();
     $this->auth->otp = new Otp();
     $this->auth->ga  = new GoogleAuthenticator();
-    // Allow codes within tolerance range of 3 * 30 second units.
-    $this->timeSkew = \Drupal::config('tfa.settings')->get('time_skew');
     $this->alreadyAccepted = FALSE;
+    $plugin_settings = \Drupal::config('tfa.settings')->get('validation_plugin_settings');
+    $settings = isset($plugin_settings['tfa_hotp']) ? $plugin_settings['tfa_hotp'] : [];
+    if (empty($settings)) {
+      $settings = [
+        'counter_window' => 10,
+        'name_prefix' => 'TFA'
+      ];
+    }
+    $this->counterWindow = $settings['counter_window'];
+    $this->namePrefix = $settings['name_prefix'];
   }
 
   /**
@@ -103,6 +118,30 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
       '#value' => t('Verify'),
     ];
     return $form;
+  }
+
+  public function buildConfigurationForm($config, $state) {
+    $settings_form['counter_window'] = [
+      '#type' => 'textfield',
+      '#title' => t('Counter Window'),
+      '#default_value' => ($this->counterWindow) ?: 5,
+      '#description' => 'How far ahead from current counter should we check the code.',
+      '#size' => 2,
+      '#states' => $state,
+      '#required' => TRUE,
+    ];
+
+    $settings_form['name_prefix'] = [
+      '#type' => 'textfield',
+      '#title' => t('OTP QR Code Prefix'),
+      '#default_value' => ($this->namePrefix) ?: 'tfa',
+      '#description' => 'Prefix for OTP QR code names. Suffix is account username.',
+      '#size' => 15,
+      '#states' => $state,
+      '#required' => TRUE,
+    ];
+
+    return $settings_form;
   }
 
   /**
@@ -157,7 +196,7 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
       // Get OTP seed.
       $seed = $this->getSeed();
       $counter = $this->getHotpCounter();
-      $this->isValid = ($seed && ($counter = $this->auth->otp->checkHotpResync(Base32::decode($seed), $counter, $code)));
+      $this->isValid = ($seed && ($counter = $this->auth->otp->checkHotpResync(Base32::decode($seed), $counter, $code, $this->counterWindow)));
       $this->setUserData('tfa', ['tfa_hotp_counter' => ++$counter], $this->uid, $this->userData);
     }
     return $this->isValid;
@@ -234,23 +273,15 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
   /**
    * {@inheritdoc}
    */
-  public function purge() {
-    $this->deleteSeed();
-    $this->deleteUserData('tfa', 'tfa_hotp_counter', $this->uid, $this->userData);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getFallbacks() {
-    return ($this->pluginDefinition['fallbacks']) ?: '';
+    return ($this->getPluginDefinition()['fallbacks']) ?: '';
   }
 
   /**
    * {@inheritdoc}
    */
   public function isFallback() {
-    return ($this->pluginDefinition['isFallback']) ?: FALSE;
+    return ($this->getPluginDefinition()['isFallback']) ?: FALSE;
   }
 
 }

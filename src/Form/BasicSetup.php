@@ -67,7 +67,7 @@ class BasicSetup extends FormBase {
       '#value' => $user,
     ];
     $tfa_data = $this->tfaGetTfaData($user->id(), $this->userData);
-    $enabled = isset($tfa_data['status']) && $tfa_data['status'] ? TRUE : FALSE;
+    $enabled = isset($tfa_data['status'], $tfa_data['data']) && !empty($tfa_data['data']['plugins']) && $tfa_data['status'] ? TRUE : FALSE;
 
     $storage = $form_state->getStorage();
     // Always require a password on the first time through.
@@ -216,9 +216,11 @@ class BasicSetup extends FormBase {
         unset($storage[$method]);
       }
 
-      // Trigger multi-step if in full setup.
-      if (!empty($storage['full_setup']) && !empty($storage[$method])) {
-        $this->tfaNextSetupStep($form_state, $method, $storage[$method], $skipped_method);
+      if (!empty($storage[$method])) {
+        // Trigger multi-step if in full setup.
+        if (!empty($storage['full_setup'])) {
+          $this->tfaNextSetupStep($form_state, $method, $storage[$method], $skipped_method);
+        }
 
         // Plugin form submit.
         $setup_class = $storage[$method];
@@ -259,11 +261,14 @@ class BasicSetup extends FormBase {
    */
   private function tfaFullSetupSteps() {
     $config = $this->config('tfa.settings');
-    $enabled_plugin = $config->get('validate_plugin');
+    $enabled_plugin = $config->get('validation_plugin');
     $steps = [
-      $config->get('validate_plugin'),
-      key($config->get('fallback_plugins')[$enabled_plugin]),
+      $config->get('validation_plugin'),
     ];
+
+    if (isset($config->get('fallback_plugins')[$enabled_plugin])) {
+      $steps[] =  key($config->get('fallback_plugins')[$enabled_plugin]);
+    }
 
     $login_plugins = $config->get('login_plugins');
 
@@ -293,7 +298,6 @@ class BasicSetup extends FormBase {
     $storage['steps_left'] = array_diff($storage['steps_left'], [$this_step]);
     if (!empty($storage['steps_left'])) {
       // Contextual reporting.
-      $output = '';
       if ($output = $step_class->getSetupMessages()) {
         $output = $skipped_step ? $output['skipped'] : $output['saved'];
       }

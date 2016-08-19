@@ -88,8 +88,7 @@ class BasicOverview extends FormBase {
           ]);
         }
         else {
-          $status_text = $this->t('Status: <strong>TFA enabled</strong>, set
-          @time.', [
+          $status_text = $this->t('Status: <strong>TFA enabled</strong>, set @time.', [
             '@time' => $date_formatter->format($user_tfa['saved']),
           ]);
         }
@@ -106,31 +105,31 @@ class BasicOverview extends FormBase {
     }
 
     if ($configuration['enabled']) {
-      $enabled = isset($user_tfa['status']) && $user_tfa['status'] ? TRUE : FALSE;
+      $enabled = isset($user_tfa['status'],$user_tfa['data']) && !empty($user_tfa['data']['plugins']) && $user_tfa['status'] ? TRUE : FALSE;
       // Validation plugin setup.
-      $enabled_plugin = $configuration['validate_plugin'];
+      $enabled_plugin = $configuration['validation_plugin'];
       $enabled_fallback_plugin = '';
       if (isset($configuration['fallback_plugins'][$enabled_plugin])) {
         $enabled_fallback_plugin = key($configuration['fallback_plugins'][$enabled_plugin]);
       }
 
-      $output['app'] = $this->tfaPluginSetupFormOverview($enabled_plugin, $user, $user_tfa);
+      $output['app'] = $this->tfaPluginSetupFormOverview($enabled_plugin, $user, $enabled);
 
       if ($enabled) {
         $login_plugins = $configuration['login_plugins'];
         foreach ($login_plugins as $lplugin_id) {
-          $output[$lplugin_id] = $this->tfaPluginSetupFormOverview($lplugin_id, $user, $user_tfa);
+          $output[$lplugin_id] = $this->tfaPluginSetupFormOverview($lplugin_id, $user, $enabled);
 
         }
 
-        $send_plugin = $configuration['send_plugin'];
+        $send_plugin = $configuration['send_plugins'];
         if ($send_plugin) {
-          $output[$send_plugin] = $this->tfaPluginSetupFormOverview($send_plugin, $user, $user_tfa);
+          $output[$send_plugin] = $this->tfaPluginSetupFormOverview($send_plugin, $user, $enabled);
         }
 
         if ($enabled_fallback_plugin) {
           // Fallback Setup.
-          $output['recovery'] = $this->tfaPluginSetupFormOverview($enabled_fallback_plugin, $user, $user_tfa);
+          $output['recovery'] = $this->tfaPluginSetupFormOverview($enabled_fallback_plugin, $user, $enabled);
         }
       }
     }
@@ -151,16 +150,13 @@ class BasicOverview extends FormBase {
    *   The setup plugin.
    * @param object $account
    *   Current user account.
-   * @param array $user_tfa
+   * @param bool $enabled
    *   Tfa data for current user.
    *
    * @return array
    *   Render array
    */
-  protected function tfaPluginSetupFormOverview($plugin, $account, array $user_tfa) {
-    $enabled = isset($user_tfa['status']) && $user_tfa['status'] ? TRUE : FALSE;
-
-    $output = [];
+  protected function tfaPluginSetupFormOverview($plugin, $account, $enabled) {
     $params = [
       'enabled' => $enabled,
       'account' => $account,

@@ -2,23 +2,13 @@
 
 namespace Drupal\tfa\Tests;
 
-use Drupal\simpletest\WebTestBase;
-use Otp\GoogleAuthenticator;
-use Otp\Otp;
 
 /**
  * Tests the Tfa UI.
  *
  * @group Tfa
  */
-class TfaConfigTest extends WebTestBase {
-  /**
-   * Object containing the external validation library.
-   *
-   * @var GoogleAuthenticator
-   */
-  protected $auth;
-
+class TfaConfigTest extends TFATestBase {
   /**
    * User doing the TFA Validation.
    *
@@ -36,19 +26,9 @@ class TfaConfigTest extends WebTestBase {
   /**
    * {@inheritdoc}
    */
-  public static $modules = ['tfa'];
-
-  /**
-   * {@inheritdoc}
-   */
   public function setUp() {
     // Enable TFA module and the test module.
     parent::setUp();
-
-    // OTP class to do GA Login validation.
-    $this->auth      = new \StdClass();
-    $this->auth->otp = new Otp();
-    $this->auth->ga  = new GoogleAuthenticator();
     $this->webUser = $this->drupalCreateUser(['setup own tfa']);
     $this->adminUser = $this->drupalCreateUser(['administer users', 'administer site configuration']);
   }
@@ -98,5 +78,4 @@ class TfaConfigTest extends WebTestBase {
         return 'The configuration options have been saved.';
     }
   }
-
 }
