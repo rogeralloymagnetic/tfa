@@ -15,7 +15,7 @@ use Drupal\encrypt\Plugin\EncryptionMethod\EncryptionMethodBase;
  *   id = "mcrypt_aes_128",
  *   title = @Translation("Mcrypt AES 128"),
  *   description = "This uses PHPs mcrypt extension and <a href='http://en.wikipedia.org/wiki/Advanced_Encryption_Standard'>AES-128</a>.",
- *   key_type = {"aes_encryption"}
+ *   key_type = {"encryption"}
  * )
  */
 class McryptAES128Encryption extends EncryptionMethodBase implements EncryptionMethodInterface {
