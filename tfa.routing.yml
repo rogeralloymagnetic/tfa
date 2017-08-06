@@ -5,6 +5,7 @@ tfa.entry:
     _title: 'Two-Factor Authentication'
   requirements:
     _permission: 'access content'
+    _custom_access: '\Drupal\tfa\Controller\TfaLoginController::access'
   options:
     _maintenance_access: TRUE
 
