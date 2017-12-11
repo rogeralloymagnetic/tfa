@@ -43,14 +43,14 @@ class TfaValidationTest extends TFATestBase {
     $account = $this->drupalCreateUser(['require tfa', 'access content']);
     $plugin = 'tfa_totp';
     $this->config('tfa.settings')
-         ->set('enabled', 1)
-         ->set('validation_plugin', $plugin)
-         ->set('encryption', 'test_encryption_profile')
-         ->save();
+      ->set('enabled', 1)
+      ->set('validation_plugin', $plugin)
+      ->set('encryption', 'test_encryption_profile')
+      ->save();
     $validation_plugin = $this->tfaValidationManager->createInstance($plugin, ['uid' => $account->id()]);
     $validation_plugin->storeSeed(self::$seed);
 
-    //Login.
+    // Login.
     $edit = [
       'name' => $account->getUsername(),
       'pass' => $account->pass_raw,
@@ -62,6 +62,11 @@ class TfaValidationTest extends TFATestBase {
     // account.
     $url_parts = explode('/', $this->url);
     $login_hash = array_pop($url_parts);
+
+    // Try invalid hash.
+    $bad_hash = substr($login_hash, 1);
+    $this->drupalGet('tfa/' . $account->id() . '/' . $bad_hash);
+    $this->assertResponse(404);
 
     // Try invalid code.
     $edit = [
@@ -109,10 +114,10 @@ class TfaValidationTest extends TFATestBase {
     $account = $this->drupalCreateUser(['require tfa', 'access content']);
     $plugin = 'tfa_hotp';
     $this->config('tfa.settings')
-         ->set('enabled', 1)
-         ->set('validation_plugin', $plugin)
-         ->set('encryption', 'test_encryption_profile')
-         ->save();
+      ->set('enabled', 1)
+      ->set('validation_plugin', $plugin)
+      ->set('encryption', 'test_encryption_profile')
+      ->save();
     $validation_plugin = $this->tfaValidationManager->createInstance($plugin, ['uid' => $account->id()]);
     $validation_plugin->storeSeed(self::$seed);
 
@@ -128,7 +133,12 @@ class TfaValidationTest extends TFATestBase {
     // account.
     $url_parts = explode('/', $this->url);
     $login_hash = array_pop($url_parts);
-    //
+
+    // Try invalid hash.
+    $bad_hash = substr($login_hash, 1);
+    $this->drupalGet('tfa/' . $account->id() . '/' . $bad_hash);
+    $this->assertResponse(404);
+
     // Try invalid code.
     $edit = [
       'code' => 112233,
@@ -177,14 +187,20 @@ class TfaValidationTest extends TFATestBase {
     $plugin = 'tfa_totp';
     $fallback_plugin = 'tfa_recovery_code';
     $fallback_plugin_config = [
-      $plugin => [$fallback_plugin => ['enable' => 1, 'settings'=> ['recovery_codes_amount' => 1], 'weight' => -2]],
+      $plugin => [
+        $fallback_plugin => [
+          'enable' => 1,
+          'settings' => ['recovery_codes_amount' => 1],
+          'weight' => -2,
+        ]
+      ],
     ];
     $this->config('tfa.settings')
-         ->set('enabled', 1)
-         ->set('validation_plugin', $plugin)
-         ->set('fallback_plugins', $fallback_plugin_config)
-         ->set('encryption', 'test_encryption_profile')
-         ->save();
+      ->set('enabled', 1)
+      ->set('validation_plugin', $plugin)
+      ->set('fallback_plugins', $fallback_plugin_config)
+      ->set('encryption', 'test_encryption_profile')
+      ->save();
     $validation_plugin = $this->tfaValidationManager->createInstance($fallback_plugin, ['uid' => $account->id()]);
     $validation_plugin->storeCodes(['222 333 444']);
 
@@ -195,10 +211,18 @@ class TfaValidationTest extends TFATestBase {
     ];
     // Do not use drupalLogin as it does actual login.
     $this->drupalPostForm('user/login', $edit, t('Log in'));
-    // Get login hash. Could user tfa_login_hash() but would require reloading
-    // account.
+    // Get login hash.
     $url_parts = explode('/', $this->url);
+    // @TODO This hash value is not correct.
     $login_hash = array_pop($url_parts);
+
+    // Try invalid hash.
+    $bad_hash = substr($login_hash, 1);
+    if (empty($bad_hash)) {
+      $bad_hash = 'xxxxxx';
+    }
+    $this->drupalGet('tfa/' . $account->id() . '/' . $bad_hash);
+    $this->assertResponse(404);
 
     // Try invalid recovery code.
     $edit = [

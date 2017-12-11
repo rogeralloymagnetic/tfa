@@ -10,6 +10,7 @@ use Drupal\tfa\TfaSetup;
 use Drupal\user\Entity\User;
 use Drupal\user\UserDataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * TFA setup form router.
@@ -158,9 +159,15 @@ class BasicSetup extends FormBase {
     $values = $form_state->getValues();
     $account = $form['account']['#value'];
     if (isset($values['current_pass'])) {
-      // Allow administrators to change TFA settings for another account.
-      if ($account->id() != $user->id() && $user->hasPermission('administer users')) {
-        $account = $user;
+      // Allow administrators to change TFA settings for another account using their own password.
+      if ($account->id() != $user->id()) {
+        if ($user->hasPermission('administer users')) {
+          $account = $user;
+        }
+        // Susp & belt: If current user lacks admin permissions, kick them out.
+        else {
+          throw new NotFoundHttpException();
+        }
       }
       $current_pass = \Drupal::service('password')
         ->check(trim($form_state->getValue('current_pass')), $account->getPassword());
@@ -267,7 +274,7 @@ class BasicSetup extends FormBase {
     ];
 
     if (isset($config->get('fallback_plugins')[$enabled_plugin])) {
-      $steps[] =  key($config->get('fallback_plugins')[$enabled_plugin]);
+      $steps[] = key($config->get('fallback_plugins')[$enabled_plugin]);
     }
 
     $login_plugins = $config->get('login_plugins');
