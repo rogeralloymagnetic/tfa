@@ -2,7 +2,7 @@
 
 namespace Drupal\tfa\Tests;
 
-use Base32\Base32;
+use ParagonIE\ConstantTime\Encoding;
 
 /**
  * Tests the functionality of the Tfa plugins.
@@ -77,7 +77,7 @@ class TfaValidationTest extends TFATestBase {
 
     // Try valid code.
     // Generate a code.
-    $code = $this->auth->otp->totp(Base32::decode(self::$seed));
+    $code = $this->auth->otp->totp(Encoding::base32DecodeUpper(self::$seed));
     $edit = [
       'code' => $code,
     ];
@@ -148,7 +148,7 @@ class TfaValidationTest extends TFATestBase {
 
     // Try valid code.
     // Generate a code.
-    $code = $this->auth->otp->hotp(Base32::decode(self::$seed), 1);
+    $code = $this->auth->otp->hotp(Encoding::base32DecodeUpper(self::$seed), 1);
     $edit = [
       'code' => $code,
     ];

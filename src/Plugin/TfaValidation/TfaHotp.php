@@ -2,7 +2,7 @@
 
 namespace Drupal\tfa\Plugin\TfaValidation;
 
-use Base32\Base32;
+use ParagonIE\ConstantTime\Encoding;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
 use Drupal\encrypt\EncryptServiceInterface;
@@ -196,7 +196,7 @@ class TfaHotp extends TfaBasePlugin implements TfaValidationInterface {
       // Get OTP seed.
       $seed = $this->getSeed();
       $counter = $this->getHotpCounter();
-      $this->isValid = ($seed && ($counter = $this->auth->otp->checkHotpResync(Base32::decode($seed), $counter, $code, $this->counterWindow)));
+      $this->isValid = ($seed && ($counter = $this->auth->otp->checkHotpResync(Encoding::base32DecodeUpper($seed), $counter, $code, $this->counterWindow)));
       $this->setUserData('tfa', ['tfa_hotp_counter' => ++$counter], $this->uid, $this->userData);
     }
     return $this->isValid;

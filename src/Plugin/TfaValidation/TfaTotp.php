@@ -2,7 +2,7 @@
 
 namespace Drupal\tfa\Plugin\TfaValidation;
 
-use Base32\Base32;
+use ParagonIE\ConstantTime\Encoding;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
 use Drupal\encrypt\EncryptServiceInterface;
@@ -196,7 +196,7 @@ class TfaTotp extends TfaBasePlugin implements TfaValidationInterface {
     else {
       // Get OTP seed.
       $seed = $this->getSeed();
-      $this->isValid = ($seed && $this->auth->otp->checkTotp(Base32::decode($seed), $code, $this->timeSkew));
+      $this->isValid = ($seed && $this->auth->otp->checkTotp(Encoding::base32DecodeUpper($seed), $code, $this->timeSkew));
     }
     return $this->isValid;
   }
