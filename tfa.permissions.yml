@@ -14,5 +14,5 @@ setup own tfa:
 
 disable own tfa:
   title: 'Disable TFA Account'
-  descrption: 'Allow user to disable once setup'
+  description: 'Allow user to disable once setup'
   restrict access: FALSE
