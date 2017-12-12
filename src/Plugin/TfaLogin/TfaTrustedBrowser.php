@@ -9,7 +9,6 @@ use Drupal\encrypt\EncryptServiceInterface;
 use Drupal\tfa\Plugin\TfaBasePlugin;
 use Drupal\tfa\Plugin\TfaLoginInterface;
 use Drupal\tfa\Plugin\TfaValidationInterface;
-use Drupal\tfa\TfaDataTrait;
 use Drupal\user\UserDataInterface;
 
 /**
@@ -23,6 +22,7 @@ use Drupal\user\UserDataInterface;
  * )
  */
 class TfaTrustedBrowser extends TfaBasePlugin implements TfaLoginInterface, TfaValidationInterface {
+
   /**
    * Trust browser.
    *
@@ -145,12 +145,12 @@ class TfaTrustedBrowser extends TfaBasePlugin implements TfaLoginInterface, TfaV
     $this->setUserData('tfa', $data, $this->configuration['uid'], $this->userData);
     // Issue cookie with ID.
     $cookie_secure = ini_get('session.cookie_secure');
-    $expiration    = REQUEST_TIME + $this->expiration;
+    $expiration = REQUEST_TIME + $this->expiration;
     $domain = strpos($_SERVER['HTTP_HOST'], 'localhost') === FALSE ? $_SERVER['HTTP_HOST'] : FALSE;
     setcookie($this->cookieName, $id, $expiration, '/', $domain, (empty($cookie_secure) ? FALSE : TRUE), TRUE);
     $name = empty($name) ? $this->getAgent() : $name;
     // TODO - use services defined in module instead this procedural way.
-    \Drupal::logger('tfa')->info('Set trusted browser for user UID !uid, browser @name', ['@name' => $name, '!uid' => $this->uid]);
+    \Drupal::logger('tfa')->info('Set trusted browser for user UID @uid, browser @name', ['@name' => $name, '@uid' => $this->uid]);
   }
 
   /**
@@ -193,7 +193,7 @@ class TfaTrustedBrowser extends TfaBasePlugin implements TfaLoginInterface, TfaV
    * @param string $id
    *   (optional) Id of the browser to be purged.
    *
-   * @return bool TRUE is id found and purged otherwise FALSE.
+   * @return bool
    *   TRUE is id found and purged otherwise FALSE.
    */
   protected function deleteTrusted($id = '') {

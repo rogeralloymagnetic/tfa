@@ -1,5 +1,7 @@
 <?php
+
 namespace Drupal\tfa\Plugin\TfaSetup;
+
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -10,6 +12,8 @@ use Drupal\tfa\Plugin\TfaSetupInterface;
 use Drupal\user\UserDataInterface;
 
 /**
+ * Class TfaTrustedBrowserSetup.
+ *
  * @TfaSetup(
  *   id = "tfa_trusted_browser_setup",
  *   label = @Translation("TFA Trusted Browser Setup"),
@@ -81,11 +85,11 @@ class TfaTrustedBrowserSetup extends TfaTrustedBrowser implements TfaSetupInterf
       foreach ($existing as $browser_id => $browser) {
         $date_formatter = \Drupal::service('date.formatter');
         $vars = [
-          '!set' => $date_formatter->format($browser['created']),
+          '@set' => $date_formatter->format($browser['created']),
         ];
 
         if (isset($browser['last_used'])) {
-          $vars['!time'] = $date_formatter->format($browser['last_used']);
+          $vars['@time'] = $date_formatter->format($browser['last_used']);
         }
 
         if ($current_trusted == $browser_id) {
@@ -96,10 +100,10 @@ class TfaTrustedBrowserSetup extends TfaTrustedBrowser implements TfaSetupInterf
         }
 
         if (empty($browser['last_used'])) {
-          $message = t('Marked trusted !set', $vars);
+          $message = t('Marked trusted @set', $vars);
         }
         else {
-          $message = t('Marked trusted !set, last used for log in !time', $vars);
+          $message = t('Marked trusted @set, last used for log in @time', $vars);
         }
         $form['existing']['trusted_browser_' . $browser_id] = [
           '#type' => 'checkbox',
@@ -139,7 +143,7 @@ class TfaTrustedBrowserSetup extends TfaTrustedBrowser implements TfaSetupInterf
         }
       }
       if ($count) {
-        \Drupal::logger('tfa')->notice('Removed !num TFA trusted browsers during trusted browser setup', ['!num' => $count]);
+        \Drupal::logger('tfa')->notice('Removed @num TFA trusted browsers during trusted browser setup', ['@num' => $count]);
       }
     }
     if (!empty($values['trust']) && $values['trust']) {
@@ -196,15 +200,15 @@ class TfaTrustedBrowserSetup extends TfaTrustedBrowser implements TfaSetupInterf
     foreach ($this->getTrustedBrowsers() as $device) {
       $date_formatter = \Drupal::service('date.formatter');
       $vars = [
-        '!set' => $date_formatter->format($device['created']),
+        '@set' => $date_formatter->format($device['created']),
         '@browser' => $device['name'],
       ];
       if (empty($device['last_used'])) {
-        $message = t('@browser, set !set', $vars);
+        $message = t('@browser, set @set', $vars);
       }
       else {
-        $vars['!time'] = $date_formatter->format($device['last_used']);
-        $message = t('@browser, set !set, last used !time', $vars);
+        $vars['@time'] = $date_formatter->format($device['last_used']);
+        $message = t('@browser, set @set, last used @time', $vars);
       }
       $trusted_browsers[] = $message;
     }
