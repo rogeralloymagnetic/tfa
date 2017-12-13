@@ -120,7 +120,7 @@ class BasicSetup extends FormBase {
 
       $plugin_id = $method . '_setup';
       $validation_inst = \Drupal::service('plugin.manager.tfa.setup');
-      $setup_plugin = $validation_inst->createInstance($plugin_id, ['uid' => $account->id()]);
+      $setup_plugin = $validation_inst->createInstance($plugin_id, ['uid' => $user->id()]);
       $tfa_setup = new TfaSetup($setup_plugin);
       $form = $tfa_setup->getForm($form, $form_state, $reset);
       $storage[$method] = $tfa_setup;
