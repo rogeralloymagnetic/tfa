@@ -78,7 +78,7 @@ class TfaRecoveryCode extends TfaBasePlugin implements TfaValidationInterface {
    * {@inheritdoc}
    */
   public function getForm(array $form, FormStateInterface $form_state) {
-    $form['recover'] = [
+    $form['code'] = [
       '#type' => 'textfield',
       '#title' => t('Enter one of your recovery codes'),
       '#required' => TRUE,
