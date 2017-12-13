@@ -126,16 +126,21 @@ class TfaLoginForm extends UserLoginForm {
     // $form_state->setRedirect('<front>');
     // return;
     $tfa_enabled = intval($this->config('tfa.settings')->get('enabled'));
+    // Stop prcoessing if Tfa is not enabled.
+    if (!$tfa_enabled) {
+      return parent::submitForm($form, $form_state);
+    }
     $allowed_skips = intval($this->config('tfa.settings')->get('validation_skip'));
 
     // GetPlugin
     // Pass to service functions.
     $validation_plugin = $this->config('tfa.settings')->get('validation_plugin');
-    $tfaValidationPlugin = $this->tfaValidationManager->createInstance($validation_plugin, ['uid' => $account->id()]);
+    $tfaValidationPlugin = !empty($validation_plugin) ?
+      ($this->tfaValidationManager->createInstance($validation_plugin, ['uid' => $account->id()])) : null;
     $this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $account->id()]);
 
     // Setup TFA.
-    if (isset($tfaValidationPlugin) && $tfa_enabled && $account->hasPermission('require tfa')) {
+    if (isset($tfaValidationPlugin) && $account->hasPermission('require tfa')) {
       if ($this->ready($tfaValidationPlugin) && $this->loginAllowed()) {
         user_login_finalize($account);
         drupal_set_message('You have logged in on a trusted browser.');
