@@ -152,7 +152,7 @@ class SettingsForm extends ConfigFormBase {
         continue;
       }
       $validation_plugins_labels[$plugin['id']] = $plugin['label']->render();
-      if (isset($plugin['fallbacks'])) {
+      if (!empty($plugin['fallbacks'])) {
         $validation_plugins_fallbacks[$plugin['id']] = $plugin['fallbacks'];
       }
     }
@@ -411,7 +411,13 @@ class SettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $validation_plugin = $form_state->getValue('tfa_validate');
     $fallback_plugins = $form_state->getValue('tfa_fallback');
+    if (empty($fallback_plugins)) {
+      $fallback_plugins = [];
+    }
     $validation_plugin_settings = $form_state->getValue('validation_plugin_settings');
+    if (empty($validation_plugin_settings)) {
+      $validation_plugin_settings = [];
+    }
 
     // Delete tfa data if plugin is disabled.
     if ($this->config('tfa.settings')->get('enabled') && !$form_state->getValue('tfa_enabled')) {
