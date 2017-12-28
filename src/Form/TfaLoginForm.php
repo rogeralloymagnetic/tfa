@@ -6,6 +6,7 @@ use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\Routing\RedirectDestinationInterface;
 use Drupal\Core\Url;
 use Drupal\tfa\Plugin\TfaSendInterface;
 use Drupal\tfa\Plugin\TfaValidationInterface;
@@ -17,6 +18,7 @@ use Drupal\user\UserAuthInterface;
 use Drupal\user\UserDataInterface;
 use Drupal\user\UserStorageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * TFA user login form.
@@ -60,6 +62,20 @@ class TfaLoginForm extends UserLoginForm {
   protected $userData;
 
   /**
+   * Redirect destination service.
+   *
+   * @var \Drupal\Core\Routing\RedirectDestinationInterface
+   */
+  protected $destination;
+
+  /**
+   * Current Request object.
+   *
+   * @var \Symfony\Component\HttpFoundation\Request
+   */
+  protected $request;
+
+  /**
    * Constructs a new user login form.
    *
    * @param \Drupal\Core\Flood\FloodInterface $flood
@@ -76,12 +92,18 @@ class TfaLoginForm extends UserLoginForm {
    *   Tfa setup plugin manager.
    * @param \Drupal\user\UserDataInterface $user_data
    *   User data service.
+   * @param \Drupal\Core\Routing\RedirectDestinationInterface $destination
+   *   Redirect destination.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   Request stack for getting current request.
    */
-  public function __construct(FloodInterface $flood, UserStorageInterface $user_storage, UserAuthInterface $user_auth, RendererInterface $renderer, TfaValidationPluginManager $tfa_validation_manager, TfaLoginPluginManager $tfa_plugin_manager, UserDataInterface $user_data) {
+  public function __construct(FloodInterface $flood, UserStorageInterface $user_storage, UserAuthInterface $user_auth, RendererInterface $renderer, TfaValidationPluginManager $tfa_validation_manager, TfaLoginPluginManager $tfa_plugin_manager, UserDataInterface $user_data, RedirectDestinationInterface $destination, Request $request) {
     parent::__construct($flood, $user_storage, $user_auth, $renderer);
     $this->tfaValidationManager = $tfa_validation_manager;
     $this->tfaLoginManager = $tfa_plugin_manager;
     $this->userData = $user_data;
+    $this->destination = $destination;
+    $this->request = $request;
   }
 
   /**
@@ -95,7 +117,9 @@ class TfaLoginForm extends UserLoginForm {
       $container->get('renderer'),
       $container->get('plugin.manager.tfa.validation'),
       $container->get('plugin.manager.tfa.login'),
-      $container->get('user.data')
+      $container->get('user.data'),
+      $container->get('redirect.destination'),
+      $container->get('request_stack')->getCurrentRequest()
     );
   }
 
@@ -173,14 +197,11 @@ class TfaLoginForm extends UserLoginForm {
         // @todo This is used in send plugins which has not been implemented
         // yet.
         // $this->begin($tfaValidationPlugin);
-        $login_hash = $this->getLoginHash($account);
-        $form_state->setRedirect(
-          'tfa.entry',
-          [
-            'user' => $account->id(),
-            'hash' => $login_hash,
-          ]
-        );
+        $parameters = $this->destination->getAsArray();
+        $parameters['user'] = $account->id();
+        $parameters['hash'] = $this->getLoginHash($account);
+        $this->request->query->remove('destination');
+        $form_state->setRedirect('tfa.entry', $parameters);
       }
       else {
         drupal_set_message($this->t('Two-factor authentication is enabled but
