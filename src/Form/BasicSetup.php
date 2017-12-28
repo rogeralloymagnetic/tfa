@@ -256,15 +256,27 @@ class BasicSetup extends FormBase {
           '@uid' => $account->id(),
         ]);
 
-        // @todo Not working, not sure why though.
-        // $params = array('account' => $account);
-        // \Drupal::service('plugin.manager.mail')->mail('tfa_basic', 'tfa_basic_tfa_enabled', $account->getEmail(), $account->getPreferredLangcode(), $params);
+        // @todo - Temporary fix for preventing emails from sending when setting up a fallback plugin.
+        // @todo - Remove this check along side removal of fallback concept in #2924691
+        $validation_plugin_manager = \Drupal::service('plugin.manager.tfa.validation');
+        $validation_plugins = $validation_plugin_manager->getDefinitions();
+        $validation_plugin_id = str_replace('_setup', '', $storage['step_method']);
+        if (isset($validation_plugins[$validation_plugin_id])) {
+          $validation_plugin = $validation_plugin_manager
+            ->createInstance($validation_plugin_id, ['uid' => $account->id()]);
+          if ($validation_plugin->isFallback()) {
+            return;
+          }
+        }
+
+        $params = array('account' => $account);
+        \Drupal::service('plugin.manager.mail')->mail('tfa', 'tfa_enabled_configuration', $account->getEmail(), $account->getPreferredLangcode(), $params);
       }
     }
   }
 
   /**
-   * Steps eligble for TFA setup.
+   * Steps eligible for TFA setup.
    */
   private function tfaFullSetupSteps() {
     $config = $this->config('tfa.settings');

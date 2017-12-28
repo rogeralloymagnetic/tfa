@@ -35,3 +35,38 @@ function tfa_block_access(Block $block, $operation, AccountInterface $account) {
     return AccessResult::forbidden();
   }
 }
+
+/**
+ * Implements hook_mail().
+ */
+function tfa_mail($key, &$message, $params) {
+  $account = $params['account'];
+  $variables = [
+    '@site_name' => \Drupal::config('system.site')->get('name'),
+    '@username' => $account->getDisplayName(),
+  ];
+  $body = [];
+
+  switch($key) {
+    case 'tfa_enabled_configuration':
+      $subject = t('Your @site_name account now has two-factor authentication', $variables);
+      $body[] = t('@username,', $variables);
+      $body[] = t('Thanks for configuring two-factor authentication on your @site_name account!', $variables);
+      $body[] = t('This additional level of security will help to ensure that only you are able to log in to your account.');
+      $body[] = t('If you ever lose the device you configured, you should act quickly to delete its association with this account.');
+      $body[] = t("-- \n@site_name team", $variables);
+      break;
+
+    case 'tfa_disabled_configuration':
+      $subject = t('Your @site_name account no longer has two-factor authentication', $variables);
+      $body[] = t('@username,', $variables);
+      $body[] = t('Two-factor authentication has been disabled on your @site_name account.', $variables);
+      $body[] = t('If you did not take this action, please contact a site administrator immediately.');
+      $body[] = t("-- \n@site_name team", $variables);
+
+      break;
+  }
+
+  $message['subject'] .= str_replace(["\r", "\n"], '', $subject);
+  $message['body'] = $body;
+}

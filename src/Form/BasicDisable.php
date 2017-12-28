@@ -168,7 +168,6 @@ class BasicDisable extends FormBase {
       '@uid' => $account->id(),
     ]);
 
-    // @todo Not working, not sure why though.
     // E-mail account to inform user that it has been disabled.
     $params = ['account' => $account];
     \Drupal::service('plugin.manager.mail')->mail('tfa', 'tfa_disabled_configuration', $account->getEmail(), $account->getPreferredLangcode(), $params);
