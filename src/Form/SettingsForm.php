@@ -5,6 +5,7 @@ namespace Drupal\tfa\Form;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
 use Drupal\tfa\TfaDataTrait;
 use Drupal\tfa\TfaLoginPluginManager;
@@ -379,6 +380,61 @@ class SettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     ];
 
+    // Email configurations.
+    if ($config->get('mail') === NULL) {
+      $message = $this->t('Email settings missing. If this is the first time you are seeing this error after upgrading the TFA module, then please make sure you have run the required @update_link function.', [
+        '@update_link' => Link::createFromRoute('update', 'system.status')->toString(),
+      ]);
+      drupal_set_message($message, 'error');
+    }
+    $form['mail'] = [
+      '#type' => 'vertical_tabs',
+      '#title' => $this->t('Emails'),
+      '#default_tab' => 'edit-tfa-enabled-configuration',
+    ];
+    $form['tfa_enabled_configuration'] = [
+      '#type' => 'details',
+      '#title' => $this->t('User enabled TFA validation method'),
+      '#description' => $this->t('This email is sent to the user when they enable a TFA validation method on their account. Available tokens are: [site] and [user]. Common variables are: [site:name], [site:url], [user:display-name], [user:account-name], and [user:mail].'),
+      '#group' => 'mail',
+      'tfa_enabled_configuration_subject' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Subject'),
+        '#default_value' => $config->get('mail.tfa_enabled_configuration.subject'),
+        '#required' => TRUE,
+      ],
+      'tfa_enabled_configuration_body' => [
+        '#type' => 'textarea',
+        '#title' => $this->t('Body'),
+        '#default_value' => $config->get('mail.tfa_enabled_configuration.body'),
+        '#required' => TRUE,
+        '#attributes' => [
+          'rows' => 10,
+        ],
+      ],
+    ];
+    $form['tfa_disabled_configuration'] = [
+      '#type' => 'details',
+      '#title' => $this->t('User disabled TFA validation method'),
+      '#description' => $this->t('This email is sent to the user when they disable a TFA validation method on their account. Available tokens are: [site] and [user]. Common variables are: [site:name], [site:url], [user:display-name], [user:account-name], and [user:mail].'),
+      '#group' => 'mail',
+      'tfa_disabled_configuration_subject' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Subject'),
+        '#default_value' => $config->get('mail.tfa_disabled_configuration.subject'),
+        '#required' => TRUE,
+      ],
+      'tfa_disabled_configuration_body' => [
+        '#type' => 'textarea',
+        '#title' => $this->t('Body'),
+        '#default_value' => $config->get('mail.tfa_disabled_configuration.body'),
+        '#required' => TRUE,
+        '#attributes' => [
+          'rows' => 10,
+        ],
+      ],
+    ];
+
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -438,6 +494,10 @@ class SettingsForm extends ConfigFormBase {
       ->set('tfa_flood_uid_only', $form_state->getValue('tfa_flood_uid_only'))
       ->set('tfa_flood_window', $form_state->getValue('tfa_flood_window'))
       ->set('tfa_flood_threshold', $form_state->getValue('tfa_flood_threshold'))
+      ->set('mail.tfa_enabled_configuration.subject', $form_state->getValue('tfa_enabled_configuration_subject'))
+      ->set('mail.tfa_enabled_configuration.body', $form_state->getValue('tfa_enabled_configuration_body'))
+      ->set('mail.tfa_disabled_configuration.subject', $form_state->getValue('tfa_disabled_configuration_subject'))
+      ->set('mail.tfa_disabled_configuration.body', $form_state->getValue('tfa_disabled_configuration_body'))
       ->save();
 
     parent::submitForm($form, $form_state);

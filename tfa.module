@@ -5,6 +5,7 @@
  * Contains tfa.module.
  */
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\block\Entity\Block;
 use Drupal\Core\Routing\RouteMatchInterface;
@@ -40,33 +41,27 @@ function tfa_block_access(Block $block, $operation, AccountInterface $account) {
  * Implements hook_mail().
  */
 function tfa_mail($key, &$message, $params) {
-  $account = $params['account'];
-  $variables = [
-    '@site_name' => \Drupal::config('system.site')->get('name'),
-    '@username' => $account->getDisplayName(),
+  $token_service = \Drupal::token();
+  $language_manager = \Drupal::languageManager();
+  $variables = ['user' => $params['account']];
+
+  $language = $language_manager->getLanguage($params['account']->getPreferredLangcode());
+  $original_language = $language_manager->getConfigOverrideLanguage();
+  $language_manager->setConfigOverrideLanguage($language);
+  $tfa_config = \Drupal::config('tfa.settings');
+
+  $token_options = [
+    'langcode' => $message['langcode'],
+    'clear' => TRUE,
   ];
-  $body = [];
 
-  switch($key) {
-    case 'tfa_enabled_configuration':
-      $subject = t('Your @site_name account now has two-factor authentication', $variables);
-      $body[] = t('@username,', $variables);
-      $body[] = t('Thanks for configuring two-factor authentication on your @site_name account!', $variables);
-      $body[] = t('This additional level of security will help to ensure that only you are able to log in to your account.');
-      $body[] = t('If you ever lose the device you configured, you should act quickly to delete its association with this account.');
-      $body[] = t("-- \n@site_name team", $variables);
-      break;
+  // Configuration mapping key matches the hook_mail() $key.
+  $subject = $tfa_config->get("mail.{$key}.subject");
+  $subject = $token_service->replace($subject, $variables, $token_options);
+  $message['subject'] = PlainTextOutput::renderFromHtml($subject);
 
-    case 'tfa_disabled_configuration':
-      $subject = t('Your @site_name account no longer has two-factor authentication', $variables);
-      $body[] = t('@username,', $variables);
-      $body[] = t('Two-factor authentication has been disabled on your @site_name account.', $variables);
-      $body[] = t('If you did not take this action, please contact a site administrator immediately.');
-      $body[] = t("-- \n@site_name team", $variables);
+  $body = $tfa_config->get("mail.{$key}.body");
+  $message['body'][] = $token_service->replace($body, $variables, $token_options);
 
-      break;
-  }
-
-  $message['subject'] .= str_replace(["\r", "\n"], '', $subject);
-  $message['body'] = $body;
+  $language_manager->setConfigOverrideLanguage($original_language);
 }

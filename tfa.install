@@ -11,3 +11,16 @@
 function tfa_update_8001() {
   \Drupal::cache('discovery')->invalidateMultiple(['tfa_setup', 'tfa_validation']);
 }
+
+/**
+ * Add new email configuration values.
+ */
+function tfa_update_8002() {
+  $config = \Drupal::configFactory()->getEditable('tfa.settings');
+  $config
+    ->set('mail.tfa_enabled_configuration.subject', "Your [site:name] account now has two-factor authentication")
+    ->set('mail.tfa_enabled_configuration.body', "[user:display-name],\n\nThanks for configuring two-factor authentication on your [site:name] account!\n\nThis additional level of security will help to ensure that only you are able to log in to your account.\n\nIf you ever lose the device you configured, you should act quickly to delete its association with this account.\n\n-- \n[site:name] team")
+    ->set('mail.tfa_disabled_configuration.subject', "Your [site:name] account no longer has two-factor authentication")
+    ->set('mail.tfa_disabled_configuration.body', "[user:display-name],\n\nTwo-factor authentication has been disabled on your [site:name] account.\n\nIf you did not take this action, please contact a site administrator immediately.\n\n-- \n[site:name] team")
+    ->save();
+}

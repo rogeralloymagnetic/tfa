@@ -52,6 +52,17 @@ tfa.settings:
     help_text:
       type: string
       label: 'Text to display on help page. Plain text only.'
+    mail:
+      type: config_object
+      label: 'Various Emails sent by TFA'
+      mapping:
+        # Mapping keys match expected hook_mail $key.
+        tfa_enabled_configuration:
+          type: mail
+          label: 'User-enabled TFA email'
+        tfa_disabled_configuration:
+          type: mail
+          label: 'User-disabled TFA email'
 
 default.fallback.config:
   type: mapping
