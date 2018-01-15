@@ -96,6 +96,7 @@ be defined to be configured properly.
 Now you should be ready to configure the TFA module.
 
 * Install the TFA module
+* Install a validation plugin (example: [GA Login](https://www.drupal.org/project/ga_login))
 * Visit the TFA module's configuration page.
     * Enable TFA
     * Select your desired Validation Plugin(s).
