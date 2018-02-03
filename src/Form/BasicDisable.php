@@ -75,11 +75,11 @@ class BasicDisable extends FormBase {
 
     // @todo Check require permissions and give warning about being locked out.
     if ($account->id() != $user->id() && $account->hasPermission('administer users')) {
-      $preamble_desc = $this->t('Are you sure you want to disable TFA on account
-      %name?', ['%name' => $user->getUsername()]);
+      $preamble_desc = $this->t('Are you sure you want to disable TFA for user
+      %name?', ['%name' => $user->getDisplayName()]);
 
       $notice_desc = $this->t('TFA settings and data will be lost. %name can
-      re-enable TFA again from their profile.', ['%name' => $user->getUsername()]);
+      re-enable TFA again from their profile.', ['%name' => $user->getDisplayName()]);
     }
     else {
       $preamble_desc = $this->t('Are you sure you want to disable your
@@ -164,7 +164,7 @@ class BasicDisable extends FormBase {
     $this->deleteUserData('tfa', null, $account->id(), $this->userData);
 
     \Drupal::logger('tfa')->notice('TFA disabled for user @name UID @uid', [
-      '@name' => $account->getUsername(),
+      '@name' => $account->getAccountName(),
       '@uid' => $account->id(),
     ]);
 

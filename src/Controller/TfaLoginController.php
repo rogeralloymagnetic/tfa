@@ -81,7 +81,7 @@ class TfaLoginController {
     // Using account login will mean this hash will become invalid once user has
     // authenticated via TFA.
     $data = implode(':', [
-      $account->getUsername(),
+      $account->getAccountName(),
       $account->getPassword(),
       $account->getLastLoginTime(),
     ]);

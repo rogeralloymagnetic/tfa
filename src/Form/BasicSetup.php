@@ -76,7 +76,7 @@ class BasicSetup extends FormBase {
       // Allow administrators to change TFA settings for another account.
       if ($account->id() == $user->id() && $account->hasPermission('administer users')) {
         $current_pass_description = $this->t('Enter your current password to
-        alter TFA settings for account %name.', ['%name' => $user->getUsername()]);
+        alter TFA settings for account %name.', ['%name' => $user->getAccountName()]);
       }
       else {
         $current_pass_description = $this->t('Enter your current password to continue.');
@@ -252,7 +252,7 @@ class BasicSetup extends FormBase {
         $data = ['plugins' => $storage['step_method']];
         $this->tfaSaveTfaData($account->id(), $this->userData, $data);
         \Drupal::logger('tfa')->info('TFA enabled for user @name UID @uid', [
-          '@name' => $account->getUsername(),
+          '@name' => $account->getAccountName(),
           '@uid' => $account->id(),
         ]);
 
