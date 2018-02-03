@@ -6,3 +6,8 @@ package: System
 configure: tfa.settings
 dependencies:
  - encrypt
+test_dependencies:
+ - key
+ - encrypt
+ - encrypt_test
+ - tfa_test_plugins

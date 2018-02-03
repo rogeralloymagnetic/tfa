@@ -30,7 +30,6 @@ class TfaConfigTest extends WebTestBase {
   public static $modules = [
     'tfa_test_plugins',
     'tfa',
-    'node',
     'encrypt',
     'encrypt_test',
     'key',
