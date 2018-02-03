@@ -36,7 +36,7 @@ class TfaLoginController {
       throw new NotFoundHttpException();
     }
     if ($account->isAuthenticated()) {
-      return $this->accessSelforAdmin($route, $account);
+      return $this->accessSelfOrAdmin($route, $account);
     }
     return AccessResult::allowed();
   }
