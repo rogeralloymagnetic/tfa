@@ -445,12 +445,6 @@ class SettingsForm extends ConfigFormBase {
     // By default, render the form using theme_system_config_form().
     $form['#theme'] = 'system_config_form';
 
-    $form['actions']['reset'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Reset'),
-      '#submit' => ['::resetForm'],
-    ];
-
     return $form;
   }
 
