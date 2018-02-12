@@ -1,4 +1,5 @@
 enabled: 0
+required_roles: { }
 send_plugins: { }
 login_plugins: { }
 validation_plugin: ''

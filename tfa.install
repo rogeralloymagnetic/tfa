@@ -24,3 +24,26 @@ function tfa_update_8002() {
     ->set('mail.tfa_disabled_configuration.body', "[user:display-name],\n\nTwo-factor authentication has been disabled on your [site:name] account.\n\nIf you did not take this action, please contact a site administrator immediately.\n\n-- \n[site:name] team")
     ->save();
 }
+
+/**
+ * Move old 'require tfa' permissions into tfa.settings.
+ */
+function tfa_update_8003() {
+  $required_roles = [];
+  $role_storage = \Drupal::entityTypeManager()->getStorage('user_role');
+  foreach ($role_storage->loadMultiple() as $role) {
+    /** @var \Drupal\user\RoleInterface $role */
+    $rid = $role->id();
+    $required_roles[$rid] = 0;
+    if ($role->hasPermission('require tfa')) {
+      $required_roles[$rid] = $rid;
+      $role->revokePermission('require tfa')
+        ->save();
+    }
+  }
+  unset($required_roles[\Drupal\Core\Session\AccountInterface::ANONYMOUS_ROLE]);
+
+  $config = \Drupal::configFactory()->getEditable('tfa.settings');
+  $config->set('required_roles', $required_roles)
+    ->save();
+}

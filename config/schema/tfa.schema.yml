@@ -5,6 +5,12 @@ tfa.settings:
     enabled:
       type: integer
       label: 'TFA enabled'
+    required_roles:
+      type: sequence
+      label: 'Roles required to setup TFA'
+      sequence:
+        type: string
+        label: 'Role'
     send_plugins:
      type: sequence
      label: 'Enabled send plugins'

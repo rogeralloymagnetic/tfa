@@ -155,6 +155,8 @@ class TfaLoginForm extends UserLoginForm {
       return parent::submitForm($form, $form_state);
     }
     $allowed_skips = intval($this->config('tfa.settings')->get('validation_skip'));
+    $required_roles = array_filter($this->config('tfa.settings')->get('required_roles'));
+    $user_is_required = !empty(array_intersect($required_roles, $account->getRoles()));
 
     // GetPlugin
     // Pass to service functions.
@@ -164,7 +166,7 @@ class TfaLoginForm extends UserLoginForm {
     $this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $account->id()]);
 
     // Setup TFA.
-    if (isset($tfaValidationPlugin) && $account->hasPermission('require tfa')) {
+    if (isset($tfaValidationPlugin) && $user_is_required) {
       if ($this->ready($tfaValidationPlugin) && $this->loginAllowed()) {
         user_login_finalize($account);
         drupal_set_message('You have logged in on a trusted browser.');

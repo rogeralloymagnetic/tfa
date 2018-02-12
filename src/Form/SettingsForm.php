@@ -184,6 +184,16 @@ class SettingsForm extends ConfigFormBase {
       ],
     ];
 
+    $form['tfa_required_roles'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Roles required to set up TFA'),
+      '#options' => array_map('\Drupal\Component\Utility\Html::escape', user_role_names(TRUE)),
+      '#default_value' => $config->get('required_roles') ?: [],
+      '#description' => $this->t('Require users with these roles to set up TFA'),
+      '#states' => $enabled_state,
+      '#required' => FALSE,
+    ];
+
     if (count($validation_plugins)) {
       $form['tfa_validate'] = [
         '#type' => 'select',
@@ -478,6 +488,7 @@ class SettingsForm extends ConfigFormBase {
     $login_plugins = $form_state->getValue('tfa_login') ?: [];
     $this->config('tfa.settings')
       ->set('enabled', $form_state->getValue('tfa_enabled'))
+      ->set('required_roles', $form_state->getValue('tfa_required_roles'))
       ->set('send_plugins', array_filter($send_plugins))
       ->set('login_plugins', array_filter($login_plugins))
       ->set('validation_plugin', $validation_plugin)
