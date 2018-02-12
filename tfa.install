@@ -47,3 +47,41 @@ function tfa_update_8003() {
   $config->set('required_roles', $required_roles)
     ->save();
 }
+
+/**
+ * Set the enabled validation plugin to an allowed validation plugin.
+ */
+function tfa_update_8004() {
+  // Update configuration with new property values.
+  $config = \Drupal::configFactory()->getEditable('tfa.settings');
+  $validation_plugin = $config->get('validation_plugin');
+  $config
+    ->clear('validation_plugin')
+    ->set('default_validation_plugin', $validation_plugin)
+    ->set('allowed_validation_plugins', [$validation_plugin => $validation_plugin])
+    ->save();
+
+  // Update user settings to turn enabled plugins string into an array.
+  $user_data_service = \Drupal::service('user.data');
+  $tfa_users_settings = $user_data_service->get('tfa', NULL, 'tfa_user_settings');
+  foreach ($tfa_users_settings as $uid => $settings) {
+    if (isset($settings['data']['plugins']) && !is_array($settings['data']['plugins'])) {
+      /*
+       * Fix a bug with how plugins were previously stored.
+       *
+       * - Previously if the user enabled both a validation plugin and its
+       *   fallback, only the fallback would be stored in their data array.
+       *
+       * - So if the current validation plugin id is not the same as the plugin
+       *   id stored in user data, then we need to add both to the new array.
+       */
+      $plugins = [];
+      if ($validation_plugin != $settings['data']['plugins']) {
+        $plugins[$validation_plugin] = $validation_plugin;
+      }
+      $plugins[$settings['data']['plugins']] = $settings['data']['plugins'];
+      $settings['data']['plugins'] = $plugins;
+      $user_data_service->set('tfa', $uid, 'tfa_user_settings', $settings);
+    }
+  }
+}

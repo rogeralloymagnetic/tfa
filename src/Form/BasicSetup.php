@@ -280,9 +280,9 @@ class BasicSetup extends FormBase {
    */
   private function tfaFullSetupSteps() {
     $config = $this->config('tfa.settings');
-    $enabled_plugin = $config->get('validation_plugin');
+    $enabled_plugin = $config->get('default_validation_plugin');
     $steps = [
-      $config->get('validation_plugin'),
+      $config->get('default_validation_plugin'),
     ];
 
     if (isset($config->get('fallback_plugins')[$enabled_plugin])) {

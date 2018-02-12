@@ -130,6 +130,7 @@ class TfaLoginForm extends UserLoginForm {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildForm($form, $form_state);
     $form['#submit'][] = '::tfaLoginFormRedirect';
+    $form['#cache'] = ['max-age' => 0];
 
     return $form;
   }
@@ -161,7 +162,7 @@ class TfaLoginForm extends UserLoginForm {
 
     // GetPlugin
     // Pass to service functions.
-    $validation_plugin = $this->config('tfa.settings')->get('validation_plugin');
+    $validation_plugin = $this->config('tfa.settings')->get('default_validation_plugin');
     $tfaValidationPlugin = !empty($validation_plugin) ?
       ($this->tfaValidationManager->createInstance($validation_plugin, ['uid' => $account->id()])) : null;
     $this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $account->id()]);

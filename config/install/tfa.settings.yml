@@ -2,8 +2,9 @@ enabled: 0
 required_roles: { }
 send_plugins: { }
 login_plugins: { }
-validation_plugin: ''
+default_validation_plugin: ''
 validation_plugin_settings: { }
+allowed_validation_plugins: { }
 fallback_plugins: { }
 help_text: 'Contact support to reset your access'
 validation_skip: 3

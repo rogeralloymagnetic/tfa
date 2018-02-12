@@ -7,8 +7,10 @@ use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
 use Drupal\tfa\TfaLoginPluginManager;
 use Drupal\tfa\TfaValidationPluginManager;
+use Drupal\user\UserDataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -80,6 +82,13 @@ class EntryForm extends FormBase {
   protected $dateFormatter;
 
   /**
+   * User data service.
+   *
+   * @var \Drupal\user\UserDataInterface
+   */
+  protected $userData;
+
+  /**
    * EntryForm constructor.
    *
    * @param \Drupal\tfa\TfaValidationPluginManager $tfa_validation_manager
@@ -90,13 +99,16 @@ class EntryForm extends FormBase {
    *   The flood control mechanism.
    * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
    *   The date service.
+   * @param \Drupal\user\UserDataInterface $user_data
+   *   User data service.
    */
-  public function __construct(TfaValidationPluginManager $tfa_validation_manager, TfaLoginPluginManager $tfa_login_manager, FloodInterface $flood, DateFormatterInterface $date_formatter) {
+  public function __construct(TfaValidationPluginManager $tfa_validation_manager, TfaLoginPluginManager $tfa_login_manager, FloodInterface $flood, DateFormatterInterface $date_formatter, UserDataInterface $user_data) {
     $this->tfaValidationManager = $tfa_validation_manager;
     $this->tfaLoginManager = $tfa_login_manager;
     $this->tfaSettings = $this->config('tfa.settings');
     $this->flood = $flood;
     $this->dateFormatter = $date_formatter;
+    $this->userData = $user_data;
   }
 
   /**
@@ -112,7 +124,8 @@ class EntryForm extends FormBase {
       $container->get('plugin.manager.tfa.validation'),
       $container->get('plugin.manager.tfa.login'),
       $container->get('flood'),
-      $container->get('date.formatter')
+      $container->get('date.formatter'),
+      $container->get('user.data')
     );
   }
 
@@ -127,13 +140,25 @@ class EntryForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, AccountInterface $user = NULL) {
-    // Get TFA plugins form.
-    $validation_plugin = $this->tfaSettings->get('validation_plugin');
+    $alternate_plugin = $this->getRequest()->get('plugin');
+    $validation_plugin_definitions = $this->tfaValidationManager->getDefinitions();
+    $user_settings = $this->userData->get('tfa', $user->id(), 'tfa_user_settings');
+    $user_enabled_validation_plugins = $user_settings['data']['plugins'];
+
+    // Default validation plugin, then check for enabled alternate plugin.
+    $validation_plugin = $this->tfaSettings->get('default_validation_plugin');
+
+    if ($alternate_plugin && !empty($validation_plugin_definitions[$alternate_plugin]) && !empty($user_enabled_validation_plugins[$alternate_plugin])) {
+      $validation_plugin = $alternate_plugin;
+      $form['#cache'] = ['max-age' => 0];
+    }
+
+    // Get current validation plugin form.
     $this->tfaValidationPlugin = $this->tfaValidationManager->createInstance($validation_plugin, ['uid' => $user->id()]);
     $form = $this->tfaValidationPlugin->getForm($form, $form_state);
 
-
-    if ($this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $user->id()])) {
+    $this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $user->id()]);
+    if ($this->tfaLoginPlugins) {
       foreach ($this->tfaLoginPlugins as $login_plugin) {
         if (method_exists($login_plugin, 'getForm')) {
           $form = $login_plugin->getForm($form, $form_state);
@@ -144,6 +169,48 @@ class EntryForm extends FormBase {
     $form['account'] = [
       '#type' => 'value',
       '#value' => $user,
+    ];
+
+    // Build a list of links for using other enabled validation methods.
+    $other_validation_plugin_links = [];
+    foreach ($user_enabled_validation_plugins as $user_enabled_validation_plugin) {
+      // Do not show the current plugin.
+      if ($validation_plugin == $user_enabled_validation_plugin) {
+        continue;
+      }
+      // Do not show plugins without labels.
+      if (empty($validation_plugin_definitions[$user_enabled_validation_plugin]['label'])) {
+        continue;
+      }
+
+      $other_validation_plugin_links[$user_enabled_validation_plugin] = [
+        'title' => $validation_plugin_definitions[$user_enabled_validation_plugin]['label'],
+        'url' => Url::fromRoute('tfa.entry', [
+          'user' => $user->id(),
+          'hash' => $this->getRequest()->get('hash'),
+          'plugin' => $user_enabled_validation_plugin,
+        ]),
+      ];
+    }
+    // Show other enabled and configured validation plugins.
+    $form['validation_plugin'] = [
+      '#type' => 'value',
+      '#value' => $validation_plugin,
+    ];
+    $form['change_validation_plugin'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Having Trouble?'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'content' => [
+        'help' => [
+          '#markup' => $this->t('Try one of your other enabled validation methods.'),
+        ],
+        'other_validation_plugins' => [
+          '#theme' => 'links',
+          '#links' => $other_validation_plugin_links,
+        ],
+      ],
     ];
 
     return $form;
@@ -187,8 +254,8 @@ class EntryForm extends FormBase {
       $form_state->clearErrors();
       $errors = $this->tfaValidationPlugin->getErrorMessages();
       $form_state->setErrorByName(key($errors), current($errors));
-      if(isset($fallbacks[$this->tfaSettings->get('validation_plugin')])) {
-        foreach ($fallbacks[$this->tfaSettings->get('validation_plugin')] as $fallback => $val) {
+      if(isset($fallbacks[$this->tfaSettings->get('default_validation_plugin')])) {
+        foreach ($fallbacks[$this->tfaSettings->get('default_validation_plugin')] as $fallback => $val) {
           $fallback_plugin = $this->tfaValidationManager->createInstance($fallback, ['uid' => $values['account']->id()]);
           if (!$fallback_plugin->validateForm($form, $form_state)) {
             $errors = $fallback_plugin->getErrorMessages();

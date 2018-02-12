@@ -195,11 +195,21 @@ class SettingsForm extends ConfigFormBase {
     ];
 
     if (count($validation_plugins)) {
+      $form['tfa_allowed_validation_plugins'] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Allowed Validation plugins'),
+        '#options' => $validation_plugins_labels,
+        '#default_value' => $config->get('allowed_validation_plugins') ?: ['tfa_totp'],
+        '#description' => $this->t('Plugins that can be setup by users for various TFA processes.'),
+        // Show only when TFA is enabled.
+        '#states' => $enabled_state,
+        '#required' => TRUE,
+      ];
       $form['tfa_validate'] = [
         '#type' => 'select',
-        '#title' => $this->t('Validation plugin'),
+        '#title' => $this->t('Default Validation plugin'),
         '#options' => $validation_plugins_labels,
-        '#default_value' => $config->get('validation_plugin') ?: 'tfa_totp',
+        '#default_value' => $config->get('default_validation_plugin') ?: 'tfa_totp',
         '#description' => $this->t('Plugin that will be used as the default TFA process.'),
         // Show only when TFA is enabled.
         '#states' => $enabled_state,
@@ -282,11 +292,26 @@ class SettingsForm extends ConfigFormBase {
       if(method_exists($instance, 'buildConfigurationForm')) {
         $validation_enabled_state = [
           'visible' => [
-            ':input[name="tfa_enabled"]' => ['checked' => TRUE],
-            'select[name="tfa_validate"]' => ['value' => $key],
+            [
+              ':input[name="tfa_enabled"]' => ['checked' => TRUE],
+              ':input[name="tfa_allowed_validation_plugins[' . $key . ']"]' => ['checked' => TRUE],
+            ],
+            [
+              'select[name="tfa_validate"]' => ['value' => $key],
+            ],
           ],
         ];
-        $form['validation_plugin_settings'][$key] = $instance->buildConfigurationForm($config, $validation_enabled_state);
+        $form['validation_plugin_settings'][$key . '_container'] = [
+          '#type' => 'container',
+          '#states' => $validation_enabled_state,
+        ];
+        $form['validation_plugin_settings'][$key . '_container']['title'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'h3',
+          '#value' => $val,
+        ];
+        $form['validation_plugin_settings'][$key . '_container']['form'] = $instance->buildConfigurationForm($config, $validation_enabled_state);
+        $form['validation_plugin_settings'][$key . '_container']['form']['#parents'] = ['validation_plugin_settings', $key];
       }
     }
 
@@ -470,6 +495,9 @@ class SettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $validation_plugin = $form_state->getValue('tfa_validate');
+    $allowed_validation_plugins = $form_state->getValue('tfa_allowed_validation_plugins');
+    // Default validation plugin must always be allowed.
+    $allowed_validation_plugins[$validation_plugin] = $validation_plugin;
     $fallback_plugins = $form_state->getValue('tfa_fallback');
     if (empty($fallback_plugins)) {
       $fallback_plugins = [];
@@ -491,7 +519,8 @@ class SettingsForm extends ConfigFormBase {
       ->set('required_roles', $form_state->getValue('tfa_required_roles'))
       ->set('send_plugins', array_filter($send_plugins))
       ->set('login_plugins', array_filter($login_plugins))
-      ->set('validation_plugin', $validation_plugin)
+      ->set('allowed_validation_plugins', array_filter($allowed_validation_plugins))
+      ->set('default_validation_plugin', $validation_plugin)
       ->set('validation_plugin_settings', $validation_plugin_settings)
       ->set('fallback_plugins', $fallback_plugins)
       ->set('validation_skip', $form_state->getValue('validation_skip'))

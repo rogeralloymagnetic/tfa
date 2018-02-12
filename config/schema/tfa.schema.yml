@@ -21,9 +21,15 @@ tfa.settings:
       label: 'Enabled Login plugins'
       sequence:
         type: tfa.login.config.[%key]
-    validation_plugin:
+    allowed_validation_plugins:
+      type: sequence
+      label: 'Allowed validation plugins'
+      sequence:
+        type: string
+        label: 'Validation plugin ID'
+    default_validation_plugin:
       type: string
-      label: 'Current validation plugin'
+      label: 'Default validation plugin'
     validation_plugin_settings:
       label: 'TFA validation plugin configuration'
       type: sequence

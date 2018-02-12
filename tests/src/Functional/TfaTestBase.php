@@ -99,6 +99,7 @@ abstract class TfaTestBase extends BrowserTestBase {
     $edit = [
       'tfa_enabled' => TRUE,
       'tfa_validate' => $validation_plugin_id,
+      "tfa_allowed_validation_plugins[{$validation_plugin_id}]" => $validation_plugin_id,
     ];
 
     $this->drupalPostForm(NULL, $edit, 'Save configuration');

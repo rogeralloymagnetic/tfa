@@ -47,7 +47,7 @@ class TfaRecoveryCode extends TfaBasePlugin implements TfaValidationInterface {
     $this->auth      = new \StdClass();
     $this->auth->otp = new Otp();
     $this->auth->ga  = new GoogleAuthenticator();
-    $validation_plugin = \Drupal::config('tfa.settings')->get('validation_plugin');
+    $validation_plugin = \Drupal::config('tfa.settings')->get('default_validation_plugin');
     $settings = \Drupal::config('tfa.settings')->get('fallback_plugins');
     $this->codeLimit = (isset($settings[$validation_plugin]['tfa_recovery_code']['settings']['recovery_codes_amount'])) ? $settings[$validation_plugin]['tfa_recovery_code']['settings']['recovery_codes_amount'] : 9;
   }

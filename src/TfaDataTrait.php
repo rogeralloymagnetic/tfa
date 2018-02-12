@@ -102,12 +102,12 @@ trait TfaDataTrait {
     }
     else {
       $tfa_data = [
-        'plugins' => '',
+        'plugins' => [],
         'sms' => FALSE,
       ];
     }
     if (isset($data['plugins'])) {
-      $tfa_data['plugins'] = $data['plugins'];
+      $tfa_data['plugins'][$data['plugins']] = $data['plugins'];
     }
     if (isset($data['sms'])) {
       $tfa_data['sms'] = $data['sms'];
@@ -136,18 +136,20 @@ trait TfaDataTrait {
    *
    * @param int $uid
    *   User account id.
+   * @param \Drupal\user\UserDataInterface $user_data
+   *   User data object to store user specific information.
    *
    * @return array
    *   TFA data.
    */
-  function tfaGetTfaData($uid, $user_data) {
+  protected function tfaGetTfaData($uid, UserDataInterface $user_data) {
     $result = $this->getUserData('tfa', 'tfa_user_settings', $uid, $user_data);
+
     if (!empty($result)) {
-      $data = $result['data'];
       $tfa = [
         'status' => $result['status'] == '1' ? TRUE : FALSE,
         'saved' => $result['saved'],
-        'data' => $data,
+        'data' => $result['data'],
         'validation_skipped' => $result['validation_skipped'],
       ];
       return $tfa;
