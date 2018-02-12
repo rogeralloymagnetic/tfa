@@ -2,7 +2,6 @@
 
 namespace Drupal\tfa\Form;
 
-use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\RendererInterface;
@@ -11,6 +10,7 @@ use Drupal\Core\Url;
 use Drupal\tfa\Plugin\TfaSendInterface;
 use Drupal\tfa\Plugin\TfaValidationInterface;
 use Drupal\tfa\TfaDataTrait;
+use Drupal\tfa\TfaLoginTrait;
 use Drupal\tfa\TfaLoginPluginManager;
 use Drupal\tfa\TfaValidationPluginManager;
 use Drupal\user\Form\UserLoginForm;
@@ -25,6 +25,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class TfaLoginForm extends UserLoginForm {
   use TfaDataTrait;
+  use TfaLoginTrait;
 
   /**
    * The validation plugin manager to fetch plugin information.
@@ -276,28 +277,6 @@ class TfaLoginForm extends UserLoginForm {
     if (method_exists($tfaSendPlugin, 'begin')) {
       $tfaSendPlugin->begin();
     }
-  }
-
-  /**
-   * Generate account hash to access the TFA form.
-   *
-   * @param object $account User account.
-   *
-   * @return string Random hash.
-   */
-
-  /**
-   * Function tfa_login_hash($account) {.
-   */
-  protected function getLoginHash($account) {
-    // Using account login will mean this hash will become invalid once user has
-    // authenticated via TFA.
-    $data = implode(':', [
-      $account->getAccountName(),
-      $account->getPassword(),
-      $account->getLastLoginTime(),
-    ]);
-    return Crypt::hashBase64($data);
   }
 
 }
