@@ -108,7 +108,7 @@ class BasicOverview extends FormBase {
       $enabled = isset($user_tfa['status'],$user_tfa['data']) && !empty($user_tfa['data']['plugins']) && $user_tfa['status'] ? TRUE : FALSE;
       // Validation plugin setup.
       $allowed_plugins = $configuration['allowed_validation_plugins'];
-      $enabled_plugins = $user_tfa['data']['plugins'];
+      $enabled_plugins = isset($user_tfa['data']['plugins']) ? $user_tfa['data']['plugins'] : [];
       $default_plugin = $configuration['default_validation_plugin'];
       $enabled_fallback_plugin = '';
       if (isset($configuration['fallback_plugins'][$default_plugin])) {
