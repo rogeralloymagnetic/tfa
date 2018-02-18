@@ -197,21 +197,25 @@ class EntryForm extends FormBase {
       '#type' => 'value',
       '#value' => $validation_plugin,
     ];
-    $form['change_validation_plugin'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Having Trouble?'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      'content' => [
-        'help' => [
-          '#markup' => $this->t('Try one of your other enabled validation methods.'),
+
+    // Don't show an empty fieldset when no other tfa methods are available.
+    if (!empty($other_validation_plugin_links)) {
+      $form['change_validation_plugin'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Having Trouble?'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        'content' => [
+          'help' => [
+            '#markup' => $this->t('Try one of your other enabled validation methods.'),
+          ],
+          'other_validation_plugins' => [
+            '#theme' => 'links',
+            '#links' => $other_validation_plugin_links,
+          ],
         ],
-        'other_validation_plugins' => [
-          '#theme' => 'links',
-          '#links' => $other_validation_plugin_links,
-        ],
-      ],
-    ];
+      ];
+    }
 
     return $form;
   }
