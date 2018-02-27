@@ -57,4 +57,12 @@ interface TfaValidationInterface {
    */
   public function isFallback();
 
+  /**
+   * Check whether the user has setup Tfa for this validation plugin.
+   *
+   * @return bool
+   *   Whether or not the user has setup this validation plugin.
+   */
+  public function ready();
+
 }
