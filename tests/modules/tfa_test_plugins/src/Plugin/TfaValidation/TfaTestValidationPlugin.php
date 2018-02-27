@@ -82,4 +82,12 @@ class TfaTestValidationPlugin implements TfaValidationInterface {
   public function isFallback() {
     return FALSE;
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function ready() {
+    return TRUE;
+  }
+
 }
