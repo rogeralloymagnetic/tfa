@@ -8,7 +8,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RedirectDestinationInterface;
 use Drupal\Core\Url;
 use Drupal\tfa\Plugin\TfaSendInterface;
-use Drupal\tfa\Plugin\TfaValidationInterface;
+use Drupal\tfa\TfaContext;
 use Drupal\tfa\TfaDataTrait;
 use Drupal\tfa\TfaLoginTrait;
 use Drupal\tfa\TfaLoginPluginManager;
@@ -49,13 +49,6 @@ class TfaLoginForm extends UserLoginForm {
   protected $tfaValidationPlugin;
 
   /**
-   * The login plugins.
-   *
-   * @var \Drupal\tfa\Plugin\TfaLoginInterface
-   */
-  protected $tfaLoginPlugins;
-
-  /**
    * The user data service.
    *
    * @var \Drupal\user\UserDataInterface
@@ -75,6 +68,15 @@ class TfaLoginForm extends UserLoginForm {
    * @var \Symfony\Component\HttpFoundation\Request
    */
   protected $request;
+
+  /**
+   * Tfa login context object.
+   *
+   * This will be initialized in the submitForm() method.
+   *
+   * @var \Drupal\tfa\TfaContext
+   */
+  protected $tfaContext;
 
   /**
    * Constructs a new user login form.
@@ -138,83 +140,98 @@ class TfaLoginForm extends UserLoginForm {
   /**
    * Login submit handler.
    *
-   * Determine if TFA process is applicable.If not, call the parent form submit.
+   * Determine if TFA process applies. If not, call the parent form submit.
    *
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Similar to tfa_user_login() but not required to force user logout.
-    $current_uid = $form_state->get('uid');
-    $account = $this->userStorage->load($form_state->get('uid'));
+    $user = $this->userStorage->load($form_state->get('uid'));
+    $this->tfaContext = new TfaContext(
+      $this->tfaValidationManager,
+      $this->tfaLoginManager,
+      $this->configFactory(),
+      $user,
+      $this->userData,
+      $this->getRequest()
+    );
 
     // Uncomment when things go wrong and you get logged out.
-    // user_login_finalize($account);
+    // user_login_finalize($user);
     // $form_state->setRedirect('<front>');
     // return;
-    $tfa_enabled = intval($this->config('tfa.settings')->get('enabled'));
-    // Stop prcoessing if Tfa is not enabled.
-    if (!$tfa_enabled) {
+
+    // Stop processing if Tfa is not enabled.
+    if (!$this->tfaContext->isModuleSetup() || !$this->tfaContext->isTfaRequired()) {
       return parent::submitForm($form, $form_state);
     }
-    $allowed_skips = intval($this->config('tfa.settings')->get('validation_skip'));
-    $required_roles = array_filter($this->config('tfa.settings')->get('required_roles'));
-    $user_is_required = !empty(array_intersect($required_roles, $account->getRoles()));
-
-    // GetPlugin
-    // Pass to service functions.
-    $validation_plugin = $this->config('tfa.settings')->get('default_validation_plugin');
-    $tfaValidationPlugin = !empty($validation_plugin) ?
-      ($this->tfaValidationManager->createInstance($validation_plugin, ['uid' => $account->id()])) : null;
-    $this->tfaLoginPlugins = $this->tfaLoginManager->getPlugins(['uid' => $account->id()]);
 
     // Setup TFA.
-    if (isset($tfaValidationPlugin) && $user_is_required) {
-      if ($this->ready($tfaValidationPlugin) && $this->loginAllowed()) {
-        user_login_finalize($account);
-        drupal_set_message('You have logged in on a trusted browser.');
-        $form_state->setRedirect('<front>');
-      }
-      elseif (!$this->ready($tfaValidationPlugin)) {
-        $tfa_data = $this->tfaGetTfaData($account->id(), $this->userData);
-        $validation_skipped = (isset($tfa_data['validation_skipped'])) ? $tfa_data['validation_skipped'] : 0;
-        if ($allowed_skips && ($left = $allowed_skips - ++$validation_skipped) >= 0) {
-          $tfa_data['validation_skipped'] = $validation_skipped;
-
-          $tfa_setup_link = Url::fromRoute('tfa.overview', array(
-            'user' => $account->id(),
-          ));
-          $tfa_setup_link = $tfa_setup_link->toString();
-          drupal_set_message($this->t('You are required to setup two-factor
-          authentication <a href="@link">here.</a> You have @skipped attempts
-          left after this you will be unable to login.', [
-            '@skipped' => $left,
-            '@link' => $tfa_setup_link,
-          ]), 'error');
-          $this->tfaSaveTfaData($account->id(), $this->userData, $tfa_data);
-          user_login_finalize($account);
-          $form_state->setRedirect('<front>');
-        }
-      }
-      elseif ($this->ready($tfaValidationPlugin) && !$this->loginAllowed($account)) {
-
-        // Begin TFA and set process context.
-        // @todo This is used in send plugins which has not been implemented
-        // yet.
-        // $this->begin($tfaValidationPlugin);
-        $parameters = $this->destination->getAsArray();
-        $parameters['user'] = $account->id();
-        $parameters['hash'] = $this->getLoginHash($account);
-        $this->request->query->remove('destination');
-        $form_state->setRedirect('tfa.entry', $parameters);
-      }
-      else {
-        drupal_set_message($this->t('Two-factor authentication is enabled but
-        misconfigured. Please contact a site administrator.'), 'error');
-        $form_state->setRedirect('user.page');
-      }
+    if ($this->tfaContext->isReady()) {
+      $this->loginWithTfa($form_state);
     }
     else {
-      return parent::submitForm($form, $form_state);
+      $this->loginWithoutTfa($form_state);
+    }
+  }
+
+  /**
+   * Handle login when TFA is set up for the user.
+   *
+   * TFA is set up for this user, and $this->tfaContext is initialized.
+   *
+   * If any of the TFA plugins allows login, then finalize the login. Otherwise,
+   * set a redirect to enter a second factor.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The state of the login form.
+   */
+  public function loginWithTfa(FormStateInterface $form_state) {
+    $user = $this->tfaContext->getUser();
+    if ($this->tfaContext->pluginAllowsLogin()) {
+      $this->tfaContext->doUserLogin();
+      drupal_set_message('You have logged in on a trusted browser.');
+      $form_state->setRedirect('<front>');
+    }
+    else {
+      // Begin TFA and set process context.
+      // @todo This is used in send plugins which has not been implemented yet.
+      // $this->begin($tfaValidationPlugin);
+      $parameters = $this->destination->getAsArray();
+      $parameters['user'] = $user->id();
+      $parameters['hash'] = $this->getLoginHash($user);
+      $this->request->query->remove('destination');
+      $form_state->setRedirect('tfa.entry', $parameters);
+    }
+  }
+
+  /**
+   * Handle the case where TFA is not yet set up.
+   *
+   * TFA is not set up for this user, and $this->tfaContext is initialized.
+   *
+   * If the user has any remaining logins, then finalize the login with a
+   * message to set up TFA. Otherwise, leave the user logged out.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The state of the login form.
+   */
+  public function loginWithoutTfa(FormStateInterface $form_state) {
+    // User may be able to skip TFA, depending on module settings and number of
+    // prior attempts.
+    $remaining = $this->tfaContext->remainingSkips();
+    if ($remaining) {
+      $user = $this->tfaContext->getUser();
+      $tfa_setup_link = Url::fromRoute('tfa.overview', [
+        'user' => $user->id(),
+      ])->toString();
+      drupal_set_message($this->t('You are required to setup two-factor authentication <a href="@link">here.</a> You have @remaining attempts left after this you will be unable to login.', [
+        '@remaining' => $remaining - 1,
+        '@link' => $tfa_setup_link,
+      ]), 'error');
+      $this->tfaContext->hasSkipped();
+      $this->tfaContext->doUserLogin();
+      $form_state->setRedirect('<front>');
     }
   }
 
@@ -225,46 +242,16 @@ class TfaLoginForm extends UserLoginForm {
    * user_login_block so that when the TFA process is applied the user will be
    * sent to the TFA form.
    *
-   * @param FormStateInterface $form_state
+   * @param array $form
+   *   The current form api array.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current form state.
    */
-  public function tfaLoginFormRedirect($form, FormStateInterface $form_state) {
+  public function tfaLoginFormRedirect(array $form, FormStateInterface $form_state) {
     $route = $form_state->getValue('tfa_redirect');
     if (isset($route)) {
       $form_state->setRedirect($route);
     }
-  }
-
-  /**
-   * Determine if TFA process is ready.
-   *
-   * @param \Drupal\tfa\Plugin\TfaValidationInterface $tfaValidationPlugin
-   *   The plugin instance of the validation method.
-   *
-   * @return bool
-   *   Whether process can begin or not.
-   */
-  protected function ready(TfaValidationInterface $tfaValidationPlugin) {
-    return $tfaValidationPlugin->ready();
-  }
-
-  /**
-   * Whether authentication should be allowed and not interrupted.
-   *
-   * If any plugin returns TRUE then authentication is not interrupted by TFA.
-   *
-   * @return bool
-   *   TRUE if login allowed otherwise FALSE.
-   */
-  protected function loginAllowed() {
-    if (!empty($this->tfaLoginPlugins)) {
-      foreach ($this->tfaLoginPlugins as $plugin) {
-        if ($plugin->loginAllowed()) {
-          return TRUE;
-        }
-      }
-    }
-    return FALSE;
   }
 
   /**
