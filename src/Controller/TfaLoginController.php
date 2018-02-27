@@ -5,9 +5,8 @@ namespace Drupal\tfa\Controller;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\user\Entity\User;
 use Drupal\tfa\TfaLoginTrait;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Drupal\user\UserInterface;
 
 /**
  * Provides access control on the verification form.
@@ -30,16 +29,32 @@ class TfaLoginController {
    */
   public function access(RouteMatch $route, AccountInterface $account) {
     $user = $route->getParameter('user');
-    $is_user = is_object($user) && ($user instanceof User);
-    $allowed = ($is_user && ($this->getLoginHash($user) == $route->getParameter('hash')));
-    if (!$allowed) {
-      // Using not found prevents user id enumeration: response is same regardless of uid.
-      throw new NotFoundHttpException();
+
+    // Start with a positive access check which is cacheable for the current
+    // route, which includes both route name and parameters.
+    $access = AccessResult::allowed();
+    $access->addCacheContexts(['route']);
+    if (!$user instanceof UserInterface) {
+      return $access->andIf(AccessResult::forbidden('Invalid user.'));
     }
+
+    // Since we're about to check the login hash, which is based on properties
+    // of the user, we now need to vary the cache based on the user object.
+    $access->addCacheableDependency($user);
+    // If the login hash doesn't match, forbid access.
+    if ($this->getLoginHash($user) !== $route->getParameter('hash')) {
+      return $access->andIf(AccessResult::forbidden('Invalid hash.'));
+    }
+
+    // If we've gotten here, we need to check that the current user is allowed
+    // to use TFA features for this account. To make this decision, we need to
+    // vary the cache based on the current user.
+    $access->addCacheableDependency($account);
     if ($account->isAuthenticated()) {
-      return $this->accessSelfOrAdmin($route, $account);
+      return $access->andIf($this->accessSelfOrAdmin($route, $account));
     }
-    return AccessResult::allowed();
+
+    return $access;
   }
 
   /**
@@ -51,22 +66,36 @@ class TfaLoginController {
    *   The current user.
    *
    * @return \Drupal\Core\Access\AccessResult
-   *   Throws an exception when uid does not exist or hash does not validate.
-   *   Using NotFound prevents uid enumeration.
+   *   The access result.
    */
   public function accessSelfOrAdmin(RouteMatch $route, AccountInterface $account) {
     $target_user = $route->getParameter('user');
-    $target_is_user = is_object($target_user) && ($target_user instanceof User);
-    // Route requires login and a valid target user account.
-    if (!$account->isAuthenticated() || !$target_is_user) {
-      // 404 exception prevents uid enumeration on routes that use this check.
-      throw new NotFoundHttpException();
+
+    // Start with a positive access result that can be cached based on the
+    // current route, which includes both route name and parameters.
+    $access = AccessResult::allowed();
+    $access->addCacheContexts(['route']);
+
+    if (!$target_user instanceof UserInterface) {
+      return $access->andIf(AccessResult::forbidden('Invalid user.'));
     }
-    // Logged in users may only work with other users if they have administer users permission.
-    if ($target_user->id() != $account->id() && !$account->hasPermission('administer users')) {
-      throw new NotFoundHttpException();
+
+    // Before we perform any checks that are dependent on the current user, make
+    // the result dependent on the current user. If we were just checking perms
+    // here, we could rely on user.permissions, but in this case we are also
+    // dependent on the ID of the user, which requires the higher level user
+    // context.
+    $access->addCacheableDependency($account);
+
+    if (!$account->isAuthenticated()) {
+      return $access->andIf(AccessResult::forbidden('User is not logged in.'));
     }
-    return AccessResult::allowed();
+
+    $is_self = $account->id() === $target_user->id();
+    $is_admin = $account->hasPermission('administer users');
+    $is_self_or_admin = AccessResult::allowedIf($is_self || $is_admin);
+
+    return $access->andIf($is_self_or_admin);
   }
 
 }
