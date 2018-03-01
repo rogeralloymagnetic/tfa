@@ -131,6 +131,13 @@ class TfaContext implements TfaContextInterface {
    * {@inheritdoc}
    */
   public function isTfaRequired() {
+    // If TFA has been set up for the user, then it is required.
+    $user_tfa_data = $this->tfaGetTfaData($this->getUser()->id(), $this->userData);
+    if (!empty($user_tfa_data['status']) && !empty($user_tfa_data['data']['plugins'])) {
+      return TRUE;
+    }
+
+    // If the user has a role that is required to use TFA, then return TRUE.
     $required_roles = array_filter($this->tfaSettings->get('required_roles'));
     $user_roles = $this->getUser()->getRoles();
     return (bool) array_intersect($required_roles, $user_roles);
