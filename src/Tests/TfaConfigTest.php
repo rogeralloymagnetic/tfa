@@ -42,7 +42,7 @@ class TfaConfigTest extends TfaTestBase {
     // Enable TFA module and the test module.
     parent::setUp();
     $this->webUser = $this->drupalCreateUser(['setup own tfa']);
-    $this->adminUser = $this->drupalCreateUser(['administer users', 'administer site configuration']);
+    $this->adminUser = $this->drupalCreateUser(['admin tfa settings']);
   }
 
   /**

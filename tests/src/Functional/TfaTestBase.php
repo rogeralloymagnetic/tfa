@@ -90,7 +90,7 @@ abstract class TfaTestBase extends BrowserTestBase {
    */
   protected function canEnableValidationPlugin($validation_plugin_id) {
     $assert = $this->assertSession();
-    $adminUser = $this->drupalCreateUser(['administer users', 'administer site configuration']);
+    $adminUser = $this->drupalCreateUser(['admin tfa settings']);
     $this->drupalLogin($adminUser);
 
     $this->drupalGet('admin/config/people/tfa');
