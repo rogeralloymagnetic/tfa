@@ -1,5 +1,5 @@
 tfa.entry:
-  path: 'tfa/{user}/{hash}'
+  path: '/tfa/{user}/{hash}'
   defaults:
     _form: '\Drupal\tfa\Form\EntryForm'
     _title: 'Two-Factor Authentication'
@@ -11,7 +11,7 @@ tfa.entry:
     no_cache: TRUE
 
 tfa.settings:
-  path: 'admin/config/people/tfa'
+  path: '/admin/config/people/tfa'
   defaults:
     _form: '\Drupal\tfa\Form\SettingsForm'
     _title: 'TFA Settings'
@@ -31,7 +31,7 @@ tfa.login:
     _maintenance_access: TRUE
 
 tfa.overview:
-  path: 'user/{user}/security/tfa'
+  path: '/user/{user}/security/tfa'
   defaults:
     _form: 'Drupal\tfa\Form\BasicOverview'
     _title: 'Security'
@@ -42,7 +42,7 @@ tfa.overview:
     _admin_route: TRUE
 
 tfa.validation.setup:
-  path: 'user/{user}/security/tfa/{method}'
+  path: '/user/{user}/security/tfa/{method}'
   defaults:
     _form: 'Drupal\tfa\Form\BasicSetup'
     _title: 'TFA setup'
@@ -53,7 +53,7 @@ tfa.validation.setup:
     _admin_route: TRUE
 
 tfa.disable:
-  path: 'user/{user}/security/tfa/disable'
+  path: '/user/{user}/security/tfa/disable'
   defaults:
     _form: 'Drupal\tfa\Form\BasicDisable'
     _title: 'TFA disable'
@@ -65,7 +65,7 @@ tfa.disable:
     _admin_route: TRUE
 
 tfa.plugin.reset:
-  path: 'user/{user}/security/tfa/{method}/{reset}'
+  path: '/user/{user}/security/tfa/{method}/{reset}'
   defaults:
     _form: 'Drupal\tfa\Form\BasicSetup'
     _title: 'TFA setup'
